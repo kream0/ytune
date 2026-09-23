@@ -37,6 +37,11 @@ data class PlaylistRef(
     val isAlbum: Boolean = false,
 )
 
+/** Playlists made in the app live in the library under this URL scheme (never sent to YouTube). */
+const val LOCAL_PLAYLIST_PREFIX = "ytune://playlist/"
+
+val PlaylistRef.isLocal: Boolean get() = url.startsWith(LOCAL_PLAYLIST_PREFIX)
+
 @Serializable
 data class SavedPlaylist(
     val ref: PlaylistRef,

@@ -56,6 +56,8 @@ import app.ytune.ui.components.ModeOptions
 import app.ytune.ui.components.PillButton
 import app.ytune.ui.components.PillStyle
 import app.ytune.ui.components.PlaylistRow
+import app.ytune.ui.components.SelectionBar
+import app.ytune.ui.components.rememberSelection
 import app.ytune.ui.components.ScreenHeader
 import app.ytune.ui.components.SheetSpec
 import app.ytune.ui.components.TrackRow
@@ -74,6 +76,7 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
     val dl = LocalDl.current
     val focus = LocalFocusManager.current
     val listState = rememberLazyListState()
+    val selection = rememberSelection<String>(ui.query, vm.filter)
 
     LaunchedEffect(Unit) { vm.openPlaylist.collect { onOpenPlaylist(it) } }
 
@@ -148,7 +151,7 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
                 else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 12.dp),
+                    contentPadding = PaddingValues(bottom = if (selection.active) 80.dp else 12.dp),
                 ) {
                     val songs = ui.songs
                     if (songs.size > 1) {
@@ -172,8 +175,12 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
                                 badge = dl.badge(item.track.id),
                                 isCurrent = player.current?.id == item.track.id,
                                 isPlaying = player.isPlaying,
-                                onClick = { Graph.player.playNow(item.track) },
+                                selected = selection.rowState(item.track.id),
+                                onClick = {
+                                    if (selection.active) selection.toggle(item.track.id) else Graph.player.playNow(item.track)
+                                },
                                 onMore = { sheets(Actions.trackSheet(item.track)) },
+                                onLongClick = { selection.toggle(item.track.id) },
                             )
                             is PlaylistResult -> PlaylistRow(
                                 ref = item.ref,
@@ -190,6 +197,17 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
                     }
                 }
             }
+
+            val songs = ui.songs
+            val chosen = { songs.filter { it.id in selection } }
+            SelectionBar(
+                selection = selection,
+                total = songs.size,
+                onSelectAll = { selection.toggleAll(songs.map { it.id }) },
+                onAddToPlaylist = { sheets(Actions.addToPlaylistSheet(chosen()) { selection.clear() }) },
+                onMore = { sheets(Actions.selectionSheet(chosen()) { selection.clear() }) },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 }

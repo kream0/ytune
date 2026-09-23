@@ -9,6 +9,8 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
   - **All at once:** downloads everything you add to the queue, such as a full playlist, right away.
   - An explicit **Download** on a track or playlist always works, whichever mode is on.
 - **Offline library:** downloaded songs, saved playlists and a download queue with progress. Once a track is on disk it always plays from the local file.
+- **Your own playlists:** *Library → Playlists → New playlist*, or *⋯ → Add to playlist* on any song. You can also save the whole queue as a playlist with the `+` in the player's queue. Open one to play, shuffle, download, rename or delete it, reorder songs (⋯ → Move up / down) or remove them.
+- **Select several at once:** long-press a song (or a playlist in the library) in any list: search results, library, a playlist or the queue. Tap more rows to add them. The bar at the bottom has *All*, *Add to playlist* and a ⋯ menu that works the same everywhere: play, play next, add to queue, add to playlist, download, delete downloads, plus the list's own actions (remove from / move to another playlist, remove from the queue, delete playlists). Back or ✕ ends the selection.
 - **Offline at a glance:** one colour scale everywhere, red (not saved) → orange → yellow → green (saved on the phone):
   - On the seek bar, the dots ahead of the playhead fill with that colour as the track downloads, and the whole bar turns green once it's saved. Grey means stream-only playback buffer.
   - The player shows a chip: `OFFLINE`, `SAVING 42%`, `QUEUED`, `WAITING FOR WI-FI`, `FAILED · RETRY` or `STREAMING · SAVE`. Tap it to save or retry.

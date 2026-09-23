@@ -205,6 +205,11 @@ class PlayerConnection(private val context: Context) {
         if (index in 0 until c.mediaItemCount) c.removeMediaItem(index)
     }
 
+    /** Removes several queue entries at once (highest index first, so the others don't shift). */
+    fun removeAll(indices: Collection<Int>) = withController { c ->
+        indices.distinct().sortedDescending().forEach { if (it in 0 until c.mediaItemCount) c.removeMediaItem(it) }
+    }
+
     fun move(from: Int, to: Int) = withController { c ->
         if (from in 0 until c.mediaItemCount && to in 0 until c.mediaItemCount) c.moveMediaItem(from, to)
     }

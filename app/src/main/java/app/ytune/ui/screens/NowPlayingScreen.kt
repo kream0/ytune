@@ -66,6 +66,8 @@ import app.ytune.ui.components.ModeOptions
 import app.ytune.ui.components.PillButton
 import app.ytune.ui.components.saveLayer
 import app.ytune.ui.components.SheetAction
+import app.ytune.ui.components.SelectionBar
+import app.ytune.ui.components.rememberSelection
 import app.ytune.ui.components.SheetSpec
 import app.ytune.ui.components.TrackRow
 import app.ytune.ui.theme.P
@@ -346,44 +348,87 @@ private fun QueueList(state: PlayerUiState) {
     val sheets = LocalSheets.current
     val dl = LocalDl.current
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (state.currentIndex - 2).coerceAtLeast(0))
-    LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 8.dp)) {
-        item(key = "header") {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("${state.queue.size} TRACKS", style = Type.label, color = P.textDim, modifier = Modifier.weight(1f))
-                PillButton("Save all", { Actions.download(state.queue) }, icon = Ic.Download)
-                Spacer(Modifier.width(8.dp))
-                PillButton("Clear", { Graph.player.clearQueue() }, icon = Ic.Delete)
+    // Keyed by position: the same song can be in the queue twice. Any queue change resets it.
+    val selection = rememberSelection<Int>(state.queue)
+    val chosen = { state.queue.filterIndexed { i, _ -> i in selection } }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = if (selection.active) 80.dp else 8.dp),
+        ) {
+            item(key = "header") {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("${state.queue.size} TRACKS", style = Type.label, color = P.textDim, modifier = Modifier.weight(1f))
+                    IconBtn(
+                        Ic.PlaylistAdd,
+                        { sheets(Actions.newPlaylistSheet(state.queue)) },
+                        bordered = true,
+                        size = 44.dp,
+                        contentDescription = "Save queue as playlist",
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    IconBtn(Ic.Download, { Actions.download(state.queue) }, bordered = true, size = 44.dp, contentDescription = "Download all")
+                    Spacer(Modifier.width(8.dp))
+                    PillButton("Clear", { Graph.player.clearQueue() }, icon = Ic.Delete)
+                }
+            }
+            itemsIndexed(state.queue, key = { i, t -> "$i:${t.id}" }) { index, track ->
+                TrackRow(
+                    track = track,
+                    badge = dl.badge(track.id),
+                    artwork = Graph.library.artworkFor(track),
+                    isCurrent = index == state.currentIndex,
+                    isPlaying = state.isPlaying,
+                    selected = selection.rowState(index),
+                    onLongClick = { selection.toggle(index) },
+                    onClick = { if (selection.active) selection.toggle(index) else Graph.player.jumpTo(index) },
+                    onMore = {
+                        sheets(
+                            Actions.trackSheet(
+                                track,
+                                extra = buildList {
+                                    if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.player.move(index, index - 1) })
+                                    if (index < state.queue.size - 1) {
+                                        add(SheetAction("Move down", Ic.ChevronDown) { Graph.player.move(index, index + 1) })
+                                    }
+                                    add(SheetAction("Remove from queue", Ic.Close, destructive = true) { Graph.player.removeAt(index) })
+                                },
+                            )
+                        )
+                    },
+                    trailing = {
+                        IconBtn(Ic.Close, { Graph.player.removeAt(index) }, tint = P.textFaint, size = 36.dp, iconSize = 18.dp)
+                    },
+                )
             }
         }
-        itemsIndexed(state.queue, key = { i, t -> "$i:${t.id}" }) { index, track ->
-            TrackRow(
-                track = track,
-                badge = dl.badge(track.id),
-                artwork = Graph.library.artworkFor(track),
-                isCurrent = index == state.currentIndex,
-                isPlaying = state.isPlaying,
-                onClick = { Graph.player.jumpTo(index) },
-                onMore = {
-                    sheets(
-                        Actions.trackSheet(
-                            track,
-                            extra = buildList {
-                                if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.player.move(index, index - 1) })
-                                if (index < state.queue.size - 1) {
-                                    add(SheetAction("Move down", Ic.ChevronDown) { Graph.player.move(index, index + 1) })
-                                }
-                                add(SheetAction("Remove from queue", Ic.Close, destructive = true) { Graph.player.removeAt(index) })
+
+        SelectionBar(
+            selection = selection,
+            total = state.queue.size,
+            onSelectAll = { selection.toggleAll(state.queue.indices.toList()) },
+            onAddToPlaylist = { sheets(Actions.addToPlaylistSheet(chosen()) { selection.clear() }) },
+            onMore = {
+                val indices = selection.keys.toList()
+                val done = { selection.clear() }
+                sheets(
+                    Actions.selectionSheet(
+                        chosen(),
+                        extra = listOf(
+                            SheetAction("Remove from queue", Ic.Close, destructive = true) {
+                                Graph.player.removeAll(indices)
+                                done()
                             },
-                        )
+                        ),
+                        onDone = done,
                     )
-                },
-                trailing = {
-                    IconBtn(Ic.Close, { Graph.player.removeAt(index) }, tint = P.textFaint, size = 36.dp, iconSize = 18.dp)
-                },
-            )
-        }
+                )
+            },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,8 @@ import app.ytune.ui.components.PlaylistRow
 import app.ytune.ui.components.ScreenHeader
 import app.ytune.ui.components.Segmented
 import app.ytune.ui.components.SheetAction
+import app.ytune.ui.components.SelectionBar
+import app.ytune.ui.components.rememberSelection
 import app.ytune.ui.components.TrackRow
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
@@ -57,122 +60,196 @@ fun LibraryScreen(app: AppViewModel) {
     val dl = LocalDl.current
     val downloaded = Graph.library.downloadedTracks(library)
     val taskList = tasks.values.toList().asReversed()
+    // One selection per page; switching pages drops it.
+    val selection = rememberSelection<String>(app.libraryPage)
 
-    Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        ScreenHeader("LIBRARY") {
-            Text(
-                formatBytes(Graph.library.totalBytes(library)),
-                style = Type.label,
-                color = P.textDim,
-                modifier = Modifier.padding(end = 8.dp),
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            ScreenHeader("LIBRARY") {
+                Text(
+                    formatBytes(Graph.library.totalBytes(library)),
+                    style = Type.label,
+                    color = P.textDim,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
+            Segmented(
+                options = listOf(
+                    "SONGS ${downloaded.size}",
+                    "PLAYLISTS ${library.playlists.size}",
+                    "QUEUE ${taskList.count { it.isActive }}",
+                ),
+                selected = app.libraryPage.ordinal,
+                onSelect = { app.libraryPage = LibraryPage.entries[it] },
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
+            Spacer(Modifier.height(8.dp))
+
+            when (app.libraryPage) {
+                LibraryPage.SONGS -> {
+                    if (downloaded.isEmpty()) {
+                        EmptyState(
+                            "OFFLINE: 0",
+                            "Download songs from search, or switch on STREAM + DL and your library fills up as you listen.",
+                        )
+                    } else {
+                        val tracks = downloaded.map { it.first }
+                        LaunchedEffect(tracks) { selection.retain(tracks.map { it.id }) }
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = if (selection.active) 80.dp else 12.dp)) {
+                            item(key = "actions") {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    PillButton("Play all", { Graph.player.playAll(tracks) }, icon = Ic.PlaylistPlay, style = PillStyle.Filled)
+                                    PillButton("Shuffle", { Graph.player.playAll(tracks, shuffle = true) }, icon = Ic.Shuffle)
+                                }
+                            }
+                            items(downloaded, key = { it.first.id }) { (track, audio) ->
+                                TrackRow(
+                                    track = track,
+                                    badge = dl.badge(track.id),
+                                    artwork = Graph.library.artworkFor(track),
+                                    isCurrent = player.current?.id == track.id,
+                                    isPlaying = player.isPlaying,
+                                    selected = selection.rowState(track.id),
+                                    onLongClick = { selection.toggle(track.id) },
+                                    onClick = {
+                                        if (selection.active) selection.toggle(track.id)
+                                        else Graph.player.playAll(tracks, tracks.indexOf(track))
+                                    },
+                                    onMore = {
+                                        sheets(
+                                            Actions.trackSheet(track).let { spec ->
+                                                spec.copy(subtitle = "${track.artist} · ${formatBytes(audio.sizeBytes)} · ${audio.bitrate / 1000} kbps")
+                                            }
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                LibraryPage.PLAYLISTS -> {
+                    if (library.playlists.isEmpty()) {
+                        EmptyState(
+                            "NO PLAYLISTS",
+                            "Make your own, or open a YouTube playlist or album and tap the bookmark to keep it here.",
+                            action = { PillButton("New playlist", { sheets(Actions.newPlaylistSheet()) }, icon = Ic.Add, style = PillStyle.Filled) },
+                        )
+                    } else {
+                        LaunchedEffect(library.playlists) { selection.retain(library.playlists.map { it.ref.url }) }
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = if (selection.active) 80.dp else 12.dp)) {
+                            item(key = "actions") {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    PillButton("New playlist", { sheets(Actions.newPlaylistSheet()) }, icon = Ic.Add, style = PillStyle.Filled)
+                                }
+                            }
+                            items(library.playlists, key = { it.ref.url }) { saved ->
+                                val offline = saved.trackIds.count { it in library.audio }
+                                PlaylistRow(
+                                    ref = saved.ref.copy(count = saved.trackIds.size.toLong()),
+                                    extra = "$offline OFFLINE",
+                                    selected = selection.rowState(saved.ref.url),
+                                    onLongClick = { selection.toggle(saved.ref.url) },
+                                    onClick = {
+                                        if (selection.active) selection.toggle(saved.ref.url) else app.openPlaylist(saved.ref)
+                                    },
+                                    onAddAll = {
+                                        val tracks = Graph.library.tracksOf(saved)
+                                        Graph.player.enqueue(tracks)
+                                        Graph.toast("Added ${tracks.size} tracks to the queue")
+                                    },
+                                    onMore = { sheets(Actions.playlistSheet(saved.ref) { app.openPlaylist(saved.ref) }) },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                LibraryPage.DOWNLOADS -> {
+                    if (taskList.isEmpty()) {
+                        EmptyState("QUEUE EMPTY", "Downloads you start show up here with their progress.")
+                    } else {
+                        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
+                            item(key = "actions") {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    PillButton("Clear finished", { Graph.downloads.clearFinished() }, icon = Ic.Check)
+                                    if (taskList.any { it.isActive }) {
+                                        PillButton("Cancel all", { Graph.downloads.cancelAll() }, icon = Ic.Close)
+                                    }
+                                }
+                            }
+                            items(taskList, key = { it.track.id }) { task ->
+                                DownloadRow(task, onMore = {
+                                    sheets(
+                                        Actions.trackSheet(
+                                            task.track,
+                                            extra = listOf(
+                                                SheetAction("Remove from list", Ic.Close) { Graph.downloads.remove(task.track.id) },
+                                            ),
+                                        )
+                                    )
+                                })
+                            }
+                        }
+                    }
+                }
+            }
         }
-        Segmented(
-            options = listOf(
-                "SONGS ${downloaded.size}",
-                "PLAYLISTS ${library.playlists.size}",
-                "QUEUE ${taskList.count { it.isActive }}",
-            ),
-            selected = app.libraryPage.ordinal,
-            onSelect = { app.libraryPage = LibraryPage.entries[it] },
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-        Spacer(Modifier.height(8.dp))
 
         when (app.libraryPage) {
             LibraryPage.SONGS -> {
-                if (downloaded.isEmpty()) {
-                    EmptyState(
-                        "OFFLINE: 0",
-                        "Download songs from search, or switch on STREAM + DL and your library fills up as you listen.",
-                    )
-                } else {
-                    val tracks = downloaded.map { it.first }
-                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
-                        item(key = "actions") {
-                            Row(
-                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                PillButton("Play all", { Graph.player.playAll(tracks) }, icon = Ic.PlaylistPlay, style = PillStyle.Filled)
-                                PillButton("Shuffle", { Graph.player.playAll(tracks, shuffle = true) }, icon = Ic.Shuffle)
-                            }
-                        }
-                        items(downloaded, key = { it.first.id }) { (track, audio) ->
-                            TrackRow(
-                                track = track,
-                                badge = dl.badge(track.id),
-                                artwork = Graph.library.artworkFor(track),
-                                isCurrent = player.current?.id == track.id,
-                                isPlaying = player.isPlaying,
-                                onClick = { Graph.player.playAll(tracks, tracks.indexOf(track)) },
-                                onMore = {
-                                    sheets(
-                                        Actions.trackSheet(track).let { spec ->
-                                            spec.copy(subtitle = "${track.artist} · ${formatBytes(audio.sizeBytes)} · ${audio.bitrate / 1000} kbps")
-                                        }
-                                    )
-                                },
-                            )
-                        }
-                    }
-                }
+                val tracks = downloaded.map { it.first }
+                val chosen = { tracks.filter { it.id in selection } }
+                SelectionBar(
+                    selection = selection,
+                    total = tracks.size,
+                    onSelectAll = { selection.toggleAll(tracks.map { it.id }) },
+                    onAddToPlaylist = { sheets(Actions.addToPlaylistSheet(chosen()) { selection.clear() }) },
+                    onMore = { sheets(Actions.selectionSheet(chosen()) { selection.clear() }) },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
-
             LibraryPage.PLAYLISTS -> {
-                if (library.playlists.isEmpty()) {
-                    EmptyState("NO PLAYLISTS", "Open a playlist or album and tap the bookmark to keep it here.")
-                } else {
-                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
-                        items(library.playlists, key = { it.ref.url }) { saved ->
-                            val offline = saved.trackIds.count { it in library.audio }
-                            PlaylistRow(
-                                ref = saved.ref.copy(count = saved.trackIds.size.toLong()),
-                                extra = "$offline OFFLINE",
-                                onClick = { app.openPlaylist(saved.ref) },
-                                onAddAll = {
-                                    val tracks = Graph.library.tracksOf(saved)
-                                    Graph.player.enqueue(tracks)
-                                    Graph.toast("Added ${tracks.size} tracks to the queue")
-                                },
-                                onMore = { sheets(Actions.playlistSheet(saved.ref) { app.openPlaylist(saved.ref) }) },
-                            )
-                        }
-                    }
-                }
+                val chosen = { library.playlists.filter { it.ref.url in selection } }
+                // Several playlists act like all their songs together, plus deleting the playlists.
+                val songs = { chosen().flatMap { Graph.library.tracksOf(it, library) }.distinctBy { it.id } }
+                SelectionBar(
+                    selection = selection,
+                    total = library.playlists.size,
+                    onSelectAll = { selection.toggleAll(library.playlists.map { it.ref.url }) },
+                    onAddToPlaylist = { sheets(Actions.addToPlaylistSheet(songs()) { selection.clear() }) },
+                    onMore = {
+                        val refs = chosen().map { it.ref }
+                        val all = songs()
+                        sheets(
+                            Actions.selectionSheet(
+                                all,
+                                title = if (refs.size == 1) refs[0].title else "${refs.size} playlists selected",
+                                subtitle = Actions.tracksLabel(all.size),
+                                extra = listOf(
+                                    SheetAction(
+                                        if (refs.size == 1) "Delete playlist" else "Delete ${refs.size} playlists",
+                                        Ic.Delete,
+                                        destructive = true,
+                                        next = { Actions.deletePlaylistsSheet(refs) { selection.clear() } },
+                                    ),
+                                ),
+                            ) { selection.clear() }
+                        )
+                    },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
-
-            LibraryPage.DOWNLOADS -> {
-                if (taskList.isEmpty()) {
-                    EmptyState("QUEUE EMPTY", "Downloads you start show up here with their progress.")
-                } else {
-                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
-                        item(key = "actions") {
-                            Row(
-                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                PillButton("Clear finished", { Graph.downloads.clearFinished() }, icon = Ic.Check)
-                                if (taskList.any { it.isActive }) {
-                                    PillButton("Cancel all", { Graph.downloads.cancelAll() }, icon = Ic.Close)
-                                }
-                            }
-                        }
-                        items(taskList, key = { it.track.id }) { task ->
-                            DownloadRow(task, onMore = {
-                                sheets(
-                                    Actions.trackSheet(
-                                        task.track,
-                                        extra = listOf(
-                                            SheetAction("Remove from list", Ic.Close) { Graph.downloads.remove(task.track.id) },
-                                        ),
-                                    )
-                                )
-                            })
-                        }
-                    }
-                }
-            }
+            LibraryPage.DOWNLOADS -> Unit
         }
     }
 }

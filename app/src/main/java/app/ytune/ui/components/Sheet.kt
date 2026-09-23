@@ -9,6 +9,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +18,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +32,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,14 +42,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
 
-/** Bottom sheet overlay: scrim + card sliding up from the bottom. */
+/** Bottom sheet overlay: scrim + card sliding up from the bottom. [onShow] swaps in a follow-up sheet. */
 @Composable
-fun SheetHost(spec: SheetSpec?, onDismiss: () -> Unit) {
+fun SheetHost(spec: SheetSpec?, onShow: (SheetSpec) -> Unit, onDismiss: () -> Unit) {
     var last by remember { mutableStateOf<SheetSpec?>(null) }
     if (spec != null) last = spec
 
@@ -66,6 +76,7 @@ fun SheetHost(spec: SheetSpec?, onDismiss: () -> Unit) {
             Column(
                 Modifier
                     .fillMaxWidth()
+                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.85f)
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(P.surface)
                     .clickable(
@@ -73,7 +84,8 @@ fun SheetHost(spec: SheetSpec?, onDismiss: () -> Unit) {
                         indication = null,
                         onClick = {},
                     )
-                    .navigationBarsPadding()
+                    .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 14.dp),
             ) {
                 // Grab handle, as three dots.
@@ -90,7 +102,8 @@ fun SheetHost(spec: SheetSpec?, onDismiss: () -> Unit) {
                 }
                 Spacer(Modifier.height(12.dp))
                 shown.content?.let {
-                    it()
+                    // Keyed so each sheet's content starts fresh (e.g. two name fields in a row).
+                    key(shown) { CompositionLocalProvider(LocalSheetClose provides onDismiss) { it() } }
                     Spacer(Modifier.height(8.dp))
                 }
                 shown.actions.forEach { action ->
@@ -99,8 +112,13 @@ fun SheetHost(spec: SheetSpec?, onDismiss: () -> Unit) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .clickable {
-                                onDismiss()
-                                action.onClick()
+                                val follow = action.next?.invoke()
+                                if (follow != null) {
+                                    onShow(follow)
+                                } else {
+                                    onDismiss()
+                                    action.onClick()
+                                }
                             }
                             .padding(horizontal = 6.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,

@@ -124,7 +124,7 @@ fun AppRoot(app: AppViewModel) {
             }
 
             ToastHost(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 6.dp))
-            SheetHost(sheet) { sheet = null }
+            SheetHost(sheet, onShow = { sheet = it }) { sheet = null }
         }
     }
 

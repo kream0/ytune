@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.util.UUID
 
 /**
  * Offline library: downloaded audio files, known track metadata and saved playlists.
@@ -93,6 +94,70 @@ class Library(context: Context, private val scope: CoroutineScope) {
     fun removePlaylist(url: String) {
         update { d -> d.copy(playlists = d.playlists.filterNot { it.ref.url == url }) }
     }
+
+    fun removePlaylists(urls: Set<String>) {
+        update { d -> d.copy(playlists = d.playlists.filterNot { it.ref.url in urls }) }
+    }
+
+    // ------------------------------------------------------------------ your own playlists
+
+    fun localPlaylists(d: LibraryData = _data.value): List<SavedPlaylist> = d.playlists.filter { it.ref.isLocal }
+
+    fun createPlaylist(name: String, tracks: List<Track> = emptyList()): PlaylistRef {
+        val unique = tracks.distinctBy { it.id }
+        val ref = PlaylistRef(url = LOCAL_PLAYLIST_PREFIX + UUID.randomUUID(), title = name.trim())
+        update { d ->
+            val known = d.tracks + unique.associateBy { it.id }
+            d.copy(
+                tracks = known,
+                playlists = listOf(SavedPlaylist(ref, emptyList()).withTrackIds(unique.map { it.id }, known)) + d.playlists,
+            )
+        }
+        return ref
+    }
+
+    /** Appends [tracks] that aren't in the playlist yet; returns how many were added. */
+    fun addToPlaylist(url: String, tracks: List<Track>): Int {
+        var added = 0
+        update { d ->
+            val known = d.tracks + tracks.associateBy { it.id }
+            d.copy(
+                tracks = known,
+                playlists = d.playlists.map { p ->
+                    if (p.ref.url != url) return@map p
+                    val new = tracks.map { it.id }.distinct().filterNot { it in p.trackIds }
+                    added = new.size
+                    p.withTrackIds(p.trackIds + new, known)
+                },
+            )
+        }
+        return added
+    }
+
+    fun removeFromPlaylist(url: String, trackIds: Set<String>) = editPlaylist(url) { it.filterNot { id -> id in trackIds } }
+
+    fun movePlaylistTrack(url: String, from: Int, to: Int) = editPlaylist(url) { ids ->
+        if (from !in ids.indices || to !in ids.indices) ids
+        else ids.toMutableList().apply { add(to, removeAt(from)) }
+    }
+
+    fun renamePlaylist(url: String, name: String) {
+        update { d ->
+            d.copy(playlists = d.playlists.map { if (it.ref.url == url) it.copy(ref = it.ref.copy(title = name.trim())) else it })
+        }
+    }
+
+    private fun editPlaylist(url: String, edit: (List<String>) -> List<String>) {
+        update { d ->
+            d.copy(playlists = d.playlists.map { if (it.ref.url == url) it.withTrackIds(edit(it.trackIds), d.tracks) else it })
+        }
+    }
+
+    /** New track list; the count and cover (first track's) follow it. */
+    private fun SavedPlaylist.withTrackIds(ids: List<String>, tracks: Map<String, Track>) = copy(
+        trackIds = ids,
+        ref = ref.copy(count = ids.size.toLong(), thumbnail = ids.firstNotNullOfOrNull { tracks[it]?.thumbnail }),
+    )
 
     fun savedPlaylist(url: String): SavedPlaylist? = _data.value.playlists.firstOrNull { it.ref.url == url }
 

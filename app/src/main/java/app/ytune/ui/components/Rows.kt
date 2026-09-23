@@ -33,6 +33,7 @@ import app.ytune.Graph
 import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
 import app.ytune.data.formatDuration
+import app.ytune.data.isLocal
 import app.ytune.download.DlStatus
 import app.ytune.download.DlTask
 import app.ytune.ui.theme.P
@@ -85,7 +86,9 @@ data class SheetAction(
     val label: String,
     val icon: ImageVector? = null,
     val destructive: Boolean = false,
-    val onClick: () -> Unit,
+    /** When set, tapping opens this follow-up sheet (a picker, a confirmation…) instead of closing. */
+    val next: (() -> SheetSpec)? = null,
+    val onClick: () -> Unit = {},
 )
 
 data class SheetSpec(
@@ -97,6 +100,9 @@ data class SheetSpec(
 
 /** Opens a bottom sheet; provided by the root screen. */
 val LocalSheets = compositionLocalOf<(SheetSpec) -> Unit> { {} }
+
+/** Closes the open sheet; for a sheet's own [SheetSpec.content] (e.g. a name field's "Create"). */
+val LocalSheetClose = compositionLocalOf<() -> Unit> { {} }
 
 // ---------------------------------------------------------------------- rows
 
@@ -142,11 +148,15 @@ fun TrackRow(
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
+    /** Null outside selection mode; otherwise whether this row is selected. */
+    selected: Boolean? = null,
+    onLongClick: (() -> Unit)? = onMore,
 ) {
     Row(
         modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onMore)
+            .background(if (selected == true) P.surfaceHigh else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(start = 16.dp, end = 6.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -190,9 +200,13 @@ fun TrackRow(
                 )
             }
         }
-        trailing?.invoke()
-        if (onMore != null) {
-            IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+        if (selected != null) {
+            SelectMark(selected)
+        } else {
+            trailing?.invoke()
+            if (onMore != null) {
+                IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+            }
         }
     }
 }
@@ -206,11 +220,14 @@ fun PlaylistRow(
     onMore: () -> Unit,
     modifier: Modifier = Modifier,
     extra: String? = null,
+    selected: Boolean? = null,
+    onLongClick: () -> Unit = onMore,
 ) {
     Row(
         modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onMore)
+            .background(if (selected == true) P.surfaceHigh else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(start = 16.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -227,7 +244,13 @@ fun PlaylistRow(
             Text(ref.title, style = Type.title, color = P.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(3.dp))
             val parts = buildList {
-                add(if (ref.isAlbum) "ALBUM" else "PLAYLIST")
+                add(
+                    when {
+                        ref.isLocal -> "MY PLAYLIST"
+                        ref.isAlbum -> "ALBUM"
+                        else -> "PLAYLIST"
+                    }
+                )
                 if (ref.uploader.isNotBlank()) add(ref.uploader.uppercase())
                 if (ref.count >= 0) add("${ref.count} TRACKS")
                 if (extra != null) add(extra)
@@ -240,8 +263,12 @@ fun PlaylistRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconBtn(Ic.PlaylistAdd, onAddAll, bordered = true, size = 38.dp, iconSize = 20.dp, contentDescription = "Add whole playlist to queue")
-        IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+        if (selected != null) {
+            SelectMark(selected)
+        } else {
+            IconBtn(Ic.PlaylistAdd, onAddAll, bordered = true, size = 38.dp, iconSize = 20.dp, contentDescription = "Add whole playlist to queue")
+            IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+        }
     }
 }
 
