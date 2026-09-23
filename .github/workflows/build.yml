@@ -1,9 +1,10 @@
 name: Build APK
 
-# Branch pushes: build a test APK (downloadable from the run's artifacts).
-# Releases: publishing a GitHub release, pushing a vX.Y.Z tag, or running this workflow by
-# hand with a version builds that version and attaches ytune.apk + version.json to the
-# release. The app's updater only looks at the latest published (non-pre)release.
+# Branch pushes: build a test APK (downloadable from the run's artifacts) — unless the
+# push sets VERSION to a version that has no release yet, which publishes that release.
+# Releases can also come from publishing a GitHub release, pushing a vX.Y.Z tag, or running
+# this workflow by hand. Each release gets ytune.apk + version.json attached; the app's
+# updater only looks at the latest published (non-pre)release.
 on:
   push:
     branches: ['**']
@@ -49,6 +50,13 @@ jobs:
                 # A release made in the GitHub UI also pushes its tag; that run is handled
                 # by the "release" event instead, so skip here to avoid building twice.
                 if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then MODE=skip; else MODE=create; fi
+              else
+                # Branch push: release if VERSION names a version that isn't released yet.
+                V=$(gh api -H "Accept: application/vnd.github.raw" \
+                  "repos/$GITHUB_REPOSITORY/contents/VERSION?ref=$GITHUB_SHA" 2>/dev/null | tr -d '[:space:]' || true)
+                if [ -n "$V" ] && ! gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                  TAG="v$V"; MODE=create
+                fi
               fi ;;
           esac
           NAME=""; CODE=""

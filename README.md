@@ -37,6 +37,7 @@ Open that link on your phone, allow "install unknown apps" for your browser, the
 
 Use any of these; each builds the APK and attaches `ytune.apk` + `version.json` to the release:
 
+- **Bump `VERSION`:** set the file to e.g. `1.1.0` and push. If `v1.1.0` isn't released yet, CI tags that commit and publishes the release.
 - **GitHub UI:** *Releases → Draft a new release*, create a tag like `v1.2.0`, then publish.
 - **Git:** `git tag v1.2.0 && git push origin v1.2.0`. The release is created for you, with generated notes.
 - **Actions tab:** run the *Build APK* workflow by hand and enter `1.2.0`.
