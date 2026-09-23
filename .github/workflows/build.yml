@@ -44,7 +44,15 @@ jobs:
           YTUNE_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           YTUNE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           YTUNE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew --no-daemon --stacktrace assembleRelease
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon assembleRelease 2>&1 | tee build.log
+
+      - name: Show compiler errors
+        if: failure()
+        run: |
+          echo "==== ERRORS ===="
+          grep -E "^e: |error:|What went wrong|Could not (find|resolve)" -A 2 build.log | head -120 || true
 
       - name: Collect APK
         run: |
