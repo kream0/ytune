@@ -10,4 +10,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent { Text("YTune") }
     }
+
+    companion object {
+        const val ACTION_OPEN_PLAYER = "app.ytune.OPEN_PLAYER"
+        const val ACTION_OPEN_DOWNLOADS = "app.ytune.OPEN_DOWNLOADS"
+    }
 }
