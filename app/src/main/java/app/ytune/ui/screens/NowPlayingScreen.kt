@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import app.ytune.Graph
 import app.ytune.data.Track
+import app.ytune.data.formatBytes
 import app.ytune.data.formatMs
 import app.ytune.playback.PlayerUiState
 import app.ytune.ui.Actions
@@ -61,6 +64,7 @@ import app.ytune.ui.components.LocalSheets
 import app.ytune.ui.components.ModeChip
 import app.ytune.ui.components.ModeOptions
 import app.ytune.ui.components.PillButton
+import app.ytune.ui.components.saveLayer
 import app.ytune.ui.components.SheetAction
 import app.ytune.ui.components.SheetSpec
 import app.ytune.ui.components.TrackRow
@@ -138,7 +142,7 @@ fun NowPlayingScreen(onClose: () -> Unit) {
 
             TitleBlock(track)
             Spacer(Modifier.height(10.dp))
-            Seekbar(state)
+            Seekbar(state, track.id)
             Spacer(Modifier.height(6.dp))
             Transport(state)
             Spacer(Modifier.height(10.dp))
@@ -149,7 +153,7 @@ fun NowPlayingScreen(onClose: () -> Unit) {
             ) {
                 ModeChip(onOptions = { sheets(SheetSpec(title = "Playback mode", content = { ModeOptions() })) })
                 Spacer(Modifier.weight(1f))
-                CurrentDownloadButton(track)
+                SaveStatusChip(track)
             }
         }
     }
@@ -208,15 +212,20 @@ private fun TitleBlock(track: Track) {
 }
 
 @Composable
-private fun Seekbar(state: PlayerUiState) {
+private fun Seekbar(state: PlayerUiState, trackId: String) {
     val progress by Graph.player.progress.collectAsStateWithLifecycle()
     val duration = state.durationMs
     val fraction = if (duration > 0) progress.positionMs.toFloat() / duration else 0f
-    val buffered = if (duration > 0) progress.bufferedMs.toFloat() / duration else 0f
+    // Dots ahead of the playhead show how much of the track is saved offline, coloured
+    // red → green. Only stream-only tracks fall back to the (grey) playback buffer.
+    val saved = LocalDl.current.badge(trackId).saveLayer()
+    val secondary = saved?.first ?: if (duration > 0) progress.bufferedMs.toFloat() / duration else 0f
+    val secondaryColor = saved?.second ?: P.textFaint
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
         DotProgressBar(
             progress = fraction,
-            buffered = buffered,
+            secondary = secondary,
+            secondaryColor = secondaryColor,
             onSeek = { f -> if (duration > 0) Graph.player.seekTo((f * duration).toLong()) },
             height = 26.dp,
         )
@@ -279,25 +288,56 @@ private fun Transport(state: PlayerUiState) {
     }
 }
 
+private class ChipSpec(val color: Color, val label: String, val labelColor: Color, val onClick: () -> Unit)
+
+/**
+ * Offline status of the current track, on the same red → orange → yellow → green scale as
+ * the seek bar. Tap to save a streamed track or retry a failed download.
+ */
 @Composable
-private fun CurrentDownloadButton(track: Track) {
-    when (val badge = LocalDl.current.badge(track.id)) {
-        DlBadge.Done -> Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(7.dp).clip(CircleShape).background(P.accent))
-            Spacer(Modifier.width(8.dp))
-            Text("OFFLINE", style = Type.labelBold, color = P.text)
+private fun SaveStatusChip(track: Track) {
+    val badge = LocalDl.current.badge(track.id)
+    val spec = when (badge) {
+        DlBadge.Done -> ChipSpec(P.saveGreen, "OFFLINE", P.saveGreen) {
+            val size = Graph.library.localAudio(track.id)?.sizeBytes ?: 0L
+            Graph.toast("Saved on this phone · ${formatBytes(size)} · plays without a connection")
         }
-        is DlBadge.Running -> Row(verticalAlignment = Alignment.CenterVertically) {
-            DotRing(badge.progress, Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("${(badge.progress * 100).toInt()}%", style = Type.labelBold, color = P.text)
+        is DlBadge.Running -> ChipSpec(
+            P.saveColor(badge.progress),
+            "SAVING ${(badge.progress * 100).toInt()}%",
+            P.text,
+        ) {}
+        DlBadge.Queued -> ChipSpec(P.saveRed, "QUEUED", P.text) {}
+        is DlBadge.Waiting -> ChipSpec(
+            P.saveRed,
+            if (badge.wifiOnly) "WAITING FOR WI-FI" else "WAITING FOR NETWORK",
+            P.text,
+        ) {}
+        is DlBadge.Failed -> ChipSpec(P.saveRed, "FAILED · RETRY", P.saveRed) {
+            Graph.downloads.retry(track.id)
+            Graph.toast("Retrying: ${badge.error ?: "download"}")
         }
-        DlBadge.Queued -> Row(verticalAlignment = Alignment.CenterVertically) {
-            DotRing(0f, Modifier.size(18.dp), spinning = true, color = P.textDim)
-            Spacer(Modifier.width(8.dp))
-            Text("QUEUED", style = Type.labelBold, color = P.textDim)
+        DlBadge.None -> ChipSpec(P.outline, "STREAMING · SAVE", P.textDim) { Actions.download(listOf(track)) }
+    }
+    Row(
+        Modifier
+            .height(36.dp)
+            .clip(CircleShape)
+            .border(1.dp, spec.color, CircleShape)
+            .clickable(onClick = spec.onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        when (badge) {
+            DlBadge.Done -> Box(Modifier.size(8.dp).clip(CircleShape).background(P.saveGreen))
+            is DlBadge.Running -> DotRing(badge.progress, Modifier.size(16.dp), color = spec.color)
+            DlBadge.Queued, is DlBadge.Waiting ->
+                DotRing(0f, Modifier.size(16.dp), spinning = true, color = P.saveRed)
+            is DlBadge.Failed -> Text("!", style = Type.labelBold, color = P.saveRed)
+            DlBadge.None -> Icon(Ic.Download, contentDescription = null, tint = P.textDim, modifier = Modifier.size(16.dp))
         }
-        DlBadge.Failed, DlBadge.None -> PillButton("Save", { Actions.download(listOf(track)) }, icon = Ic.Download)
+        Spacer(Modifier.width(8.dp))
+        Text(spec.label, style = Type.labelBold, color = spec.labelColor)
     }
 }
 

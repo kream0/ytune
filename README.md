@@ -9,6 +9,10 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
   - **All at once:** downloads everything you add to the queue, such as a full playlist, right away.
   - An explicit **Download** on a track or playlist always works, whichever mode is on.
 - **Offline library:** downloaded songs, saved playlists and a download queue with progress. Once a track is on disk it always plays from the local file.
+- **Offline at a glance:** one colour scale everywhere, red (not saved) → orange → yellow → green (saved on the phone):
+  - On the seek bar, the dots ahead of the playhead fill with that colour as the track downloads, and the whole bar turns green once it's saved. Grey means stream-only playback buffer.
+  - The player shows a chip: `OFFLINE`, `SAVING 42%`, `QUEUED`, `WAITING FOR WI-FI`, `FAILED · RETRY` or `STREAMING · SAVE`. Tap it to save or retry.
+  - List rows get a matching ring, or a green dot when the track is saved.
 - **Player:** queue, shuffle, repeat, seek, a dot-matrix seek bar and "halftone" dot artwork. Tap the cover to switch to the photo.
 - **Headset and Nothing Ear controls:** playback runs in a Media3 `MediaSession`, so it works from Bluetooth media keys (play/pause, next, previous), the lock screen and the notification. It pauses when the earbuds disconnect or come out, and pressing play with the app closed resumes your last queue.
 

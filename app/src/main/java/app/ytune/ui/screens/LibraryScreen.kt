@@ -205,13 +205,19 @@ private fun DownloadRow(task: DlTask, onMore: () -> Unit) {
             Text(
                 status.uppercase(),
                 style = Type.label,
-                color = if (task.status == DlStatus.FAILED) P.accent else P.textDim,
+                color = when (task.status) {
+                    DlStatus.FAILED -> P.saveRed
+                    DlStatus.DONE -> P.saveGreen
+                    DlStatus.RUNNING -> P.saveColor(task.progress)
+                    else -> P.textDim
+                },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (task.status == DlStatus.RUNNING) {
                 DotProgressBar(
                     progress = task.progress,
+                    activeColor = P.saveColor(task.progress),
                     height = 12.dp,
                     spacing = 5.dp,
                     radius = 1.3.dp,
@@ -222,7 +228,7 @@ private fun DownloadRow(task: DlTask, onMore: () -> Unit) {
         when (task.status) {
             DlStatus.RUNNING, DlStatus.QUEUED, DlStatus.WAITING_NETWORK -> {
                 if (task.status != DlStatus.RUNNING) {
-                    DotRing(0f, Modifier.size(16.dp), spinning = true, color = P.textDim)
+                    DotRing(0f, Modifier.size(16.dp), spinning = true, color = P.saveRed)
                 }
                 IconBtn(Ic.Close, { Graph.downloads.cancel(task.track.id) }, tint = P.textDim, contentDescription = "Cancel")
             }

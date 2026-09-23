@@ -56,6 +56,7 @@ import app.ytune.ui.components.LocalDl
 import app.ytune.ui.components.LocalSheets
 import app.ytune.ui.components.SheetHost
 import app.ytune.ui.components.SheetSpec
+import app.ytune.ui.components.saveLayer
 import app.ytune.ui.screens.LibraryScreen
 import app.ytune.ui.screens.NowPlayingScreen
 import app.ytune.ui.screens.PlaylistScreen
@@ -149,6 +150,7 @@ private fun MiniPlayer(state: PlayerUiState, onOpen: () -> Unit) {
     val track = state.current ?: return
     val progress by Graph.player.progress.collectAsStateWithLifecycle()
     val fraction = if (state.durationMs > 0) progress.positionMs.toFloat() / state.durationMs else 0f
+    val saved = LocalDl.current.badge(track.id).saveLayer()
     Column(
         Modifier
             .fillMaxWidth()
@@ -188,6 +190,8 @@ private fun MiniPlayer(state: PlayerUiState, onOpen: () -> Unit) {
         }
         DotProgressBar(
             progress = fraction,
+            secondary = saved?.first ?: 0f,
+            secondaryColor = saved?.second ?: P.textFaint,
             modifier = Modifier.padding(horizontal = 14.dp),
             height = 14.dp,
             spacing = 5.dp,

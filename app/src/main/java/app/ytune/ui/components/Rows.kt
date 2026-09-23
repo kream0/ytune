@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.ytune.Graph
 import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
 import app.ytune.data.formatDuration
@@ -40,12 +41,25 @@ import coil.compose.AsyncImage
 
 // ---------------------------------------------------------------------- shared UI state
 
+/** Offline state of a track, as shown in lists and on the player. */
 sealed interface DlBadge {
     data object None : DlBadge
     data object Done : DlBadge
     data object Queued : DlBadge
-    data object Failed : DlBadge
+    data class Waiting(val wifiOnly: Boolean) : DlBadge
+    data class Failed(val error: String?) : DlBadge
     data class Running(val progress: Float) : DlBadge
+}
+
+/**
+ * Seek-bar overlay for a track: how much of it is saved on the phone, tinted on the
+ * red → orange → yellow → green scale. Null when nothing is being saved.
+ */
+@Composable
+fun DlBadge.saveLayer(): Pair<Float, Color>? = when (this) {
+    DlBadge.Done -> 1f to P.saveGreen.copy(alpha = 0.6f)
+    is DlBadge.Running -> progress to P.saveColor(progress).copy(alpha = 0.65f)
+    else -> null
 }
 
 /** Snapshot of download state for list rows (provided once at the root). */
@@ -56,8 +70,9 @@ data class DlSnapshot(val downloaded: Set<String> = emptySet(), val tasks: Map<S
         val t = tasks[id] ?: return DlBadge.None
         return when (t.status) {
             DlStatus.RUNNING -> DlBadge.Running(t.progress)
-            DlStatus.QUEUED, DlStatus.WAITING_NETWORK -> DlBadge.Queued
-            DlStatus.FAILED -> DlBadge.Failed
+            DlStatus.QUEUED -> DlBadge.Queued
+            DlStatus.WAITING_NETWORK -> DlBadge.Waiting(Graph.settings.current.wifiOnly)
+            DlStatus.FAILED -> DlBadge.Failed(t.error)
             DlStatus.DONE -> DlBadge.Done
             DlStatus.CANCELED -> DlBadge.None
         }
@@ -105,11 +120,13 @@ fun DownloadBadge(badge: DlBadge, modifier: Modifier = Modifier) {
     when (badge) {
         DlBadge.None -> Unit
         DlBadge.Done -> Box(modifier.size(14.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.size(7.dp).clip(CircleShape).background(P.accent))
+            Box(Modifier.size(7.dp).clip(CircleShape).background(P.saveGreen))
         }
-        DlBadge.Queued -> DotRing(0f, modifier.size(14.dp), spinning = true, color = P.textDim)
-        DlBadge.Failed -> Text("!", style = Type.labelBold, color = P.accent, modifier = modifier)
-        is DlBadge.Running -> DotRing(badge.progress, modifier.size(14.dp))
+        DlBadge.Queued, is DlBadge.Waiting ->
+            DotRing(0f, modifier.size(14.dp), spinning = true, color = P.saveRed)
+        is DlBadge.Failed -> Text("!", style = Type.labelBold, color = P.saveRed, modifier = modifier)
+        is DlBadge.Running ->
+            DotRing(badge.progress, modifier.size(14.dp), color = P.saveColor(badge.progress))
     }
 }
 

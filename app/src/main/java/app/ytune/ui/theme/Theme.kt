@@ -12,6 +12,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -34,7 +35,22 @@ data class Palette(
     val dotOff: Color,
     val inverse: Color,
     val onInverse: Color,
-)
+    /** Offline-state scale: not saved → saving → saved. */
+    val saveRed: Color,
+    val saveOrange: Color,
+    val saveYellow: Color,
+    val saveGreen: Color,
+) {
+    /** Colour for a download that is [progress] (0..1) complete: red → orange → yellow → green. */
+    fun saveColor(progress: Float): Color {
+        val p = progress.coerceIn(0f, 1f)
+        return when {
+            p < 1f / 3 -> lerp(saveRed, saveOrange, p * 3)
+            p < 2f / 3 -> lerp(saveOrange, saveYellow, (p - 1f / 3) * 3)
+            else -> lerp(saveYellow, saveGreen, (p - 2f / 3) * 3)
+        }
+    }
+}
 
 val NothingRed = Color(0xFFD71921)
 
@@ -51,6 +67,10 @@ val DarkPalette = Palette(
     dotOff = Color(0xFF262626),
     inverse = Color(0xFFFFFFFF),
     onInverse = Color(0xFF000000),
+    saveRed = NothingRed,
+    saveOrange = Color(0xFFF26B1D),
+    saveYellow = Color(0xFFF5C518),
+    saveGreen = Color(0xFF35D07F),
 )
 
 val LightPalette = Palette(
@@ -66,6 +86,10 @@ val LightPalette = Palette(
     dotOff = Color(0xFFD6D6D6),
     inverse = Color(0xFF000000),
     onInverse = Color(0xFFFFFFFF),
+    saveRed = NothingRed,
+    saveOrange = Color(0xFFE0600F),
+    saveYellow = Color(0xFFCC9A00),
+    saveGreen = Color(0xFF1F9E57),
 )
 
 val LocalPalette = staticCompositionLocalOf { DarkPalette }

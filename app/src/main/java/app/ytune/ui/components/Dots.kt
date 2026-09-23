@@ -104,18 +104,22 @@ fun DotIcon(pattern: List<String>, color: Color, modifier: Modifier = Modifier.s
     }
 }
 
-/** Seek bar drawn as a row of dots; the playhead is a red dot. Tap or drag to seek. */
+/**
+ * Seek bar drawn as a row of dots; the playhead is a red dot. Tap or drag to seek.
+ * [secondary] tints the dots ahead of the playhead up to that fraction: how much of the
+ * track is saved offline (in the save colour) or, when streaming only, buffered (grey).
+ */
 @Composable
 fun DotProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
-    buffered: Float = 0f,
+    secondary: Float = 0f,
     onSeek: ((Float) -> Unit)? = null,
     height: Dp = 22.dp,
     spacing: Dp = 7.dp,
     radius: Dp = 2.dp,
     activeColor: Color = P.text,
-    bufferedColor: Color = P.textFaint,
+    secondaryColor: Color = P.textFaint,
     inactiveColor: Color = P.dotOff,
     headColor: Color = P.accent,
     showHead: Boolean = true,
@@ -157,7 +161,7 @@ fun DotProgressBar(
             val f = i.toFloat() / (n - 1)
             val color = when {
                 i <= head && f <= shown + 0.0001f -> activeColor
-                f <= buffered -> bufferedColor
+                f <= secondary -> secondaryColor
                 else -> inactiveColor
             }
             drawCircle(color, r, Offset(r + i * step, cy))
