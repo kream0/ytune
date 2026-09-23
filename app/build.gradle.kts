@@ -1,3 +1,6 @@
+import java.net.URI
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -15,8 +18,8 @@ val glyphSdk = file("libs/glyph-matrix-sdk-2.0.aar")
 if (!glyphSdk.exists()) {
     val url = "https://raw.githubusercontent.com/Nothing-Developer-Programme/Glyph-Developer-Kit/" +
         "8ee807a9312a640b0d43051450924e3446bc1d78/sdk/glyph-matrix-sdk-2.0.aar"
-    val bytes = java.net.URI(url).toURL().readBytes()
-    val sha = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    val bytes = URI(url).toURL().readBytes()
+    val sha = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     check(sha == "329393019db5f0f987c6245855d13fa273d06756c68829ca0f6ae686ba336da1") {
         "Unexpected checksum for the Glyph SDK download ($sha)"
     }
