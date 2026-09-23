@@ -96,14 +96,17 @@ object YouTube {
     fun playlist(url: String): PlaylistPager = PlaylistPager(service.getPlaylistExtractor(url), url)
 
 
-    /** Loads a whole playlist (capped, since YouTube mixes are endless). */
-    fun loadWholePlaylist(url: String, limit: Int = 1000): Pair<PlaylistRef, List<Track>> {
+    /** YouTube "Mix" playlists (list=RD…) never end, so they get a much smaller cap. */
+    fun maxTracksFor(url: String): Int = if (url.contains("list=RD")) 100 else 1000
+
+    /** Loads a whole playlist, capped by [maxTracksFor]. */
+    fun loadWholePlaylist(url: String, limit: Int = maxTracksFor(url)): Pair<PlaylistRef, List<Track>> {
         val pager = playlist(url)
         val all = LinkedHashMap<String, Track>()
         while (pager.hasMore && all.size < limit) {
             val before = all.size
             pager.loadNext().forEach { all.putIfAbsent(it.id, it) }
-            if (all.size == before && !pager.hasMore) break
+            if (all.size == before) break // no progress (empty or repeating pages)
         }
         return pager.header to all.values.take(limit)
     }

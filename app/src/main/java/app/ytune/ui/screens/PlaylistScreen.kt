@@ -73,10 +73,13 @@ class PlaylistViewModel(private val initial: PlaylistRef) : ViewModel() {
         viewModelScope.launch {
             try {
                 val pager = withContext(Dispatchers.IO) { YouTube.playlist(initial.url) }
+                val limit = YouTube.maxTracksFor(initial.url)
                 val all = LinkedHashMap<String, Track>()
-                while (pager.hasMore && all.size < MAX_TRACKS) {
+                while (pager.hasMore && all.size < limit) {
+                    val before = all.size
                     val page = withContext(Dispatchers.IO) { pager.loadNext() }
                     page.forEach { all.putIfAbsent(it.id, it) }
+                    val progressed = all.size > before
                     val header = pager.header
                     _ui.value = PlaylistUi(
                         ref = header.copy(
@@ -84,10 +87,10 @@ class PlaylistViewModel(private val initial: PlaylistRef) : ViewModel() {
                             thumbnail = header.thumbnail ?: initial.thumbnail,
                             title = header.title.takeUnless { it == "Playlist" } ?: initial.title,
                         ),
-                        tracks = all.values.toList(),
-                        loading = pager.hasMore && all.size < MAX_TRACKS && page.isNotEmpty(),
+                        tracks = all.values.take(limit),
+                        loading = pager.hasMore && all.size < limit && progressed,
                     )
-                    if (page.isEmpty()) break
+                    if (!progressed) break
                 }
                 _ui.value = _ui.value.copy(loading = false)
             } catch (e: CancellationException) {
@@ -101,10 +104,6 @@ class PlaylistViewModel(private val initial: PlaylistRef) : ViewModel() {
                 }
             }
         }
-    }
-
-    companion object {
-        const val MAX_TRACKS = 1000
     }
 }
 
