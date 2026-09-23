@@ -4,5 +4,5 @@
     <string name="channel_downloads">Downloads</string>
     <string name="channel_downloads_desc">Progress of audio downloads</string>
     <string name="glyph_toy_name">YTune · Now playing</string>
-    <string name="glyph_toy_summary">Scrolls the current track. Long-press the Glyph Button to play or pause.</string>
+    <string name="glyph_toy_summary">Scrolls the current track and its progress. On Phone (3), long-press the Glyph Button to play or pause.</string>
 </resources>

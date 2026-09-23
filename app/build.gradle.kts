@@ -40,12 +40,13 @@ val releaseKeystore = System.getenv("YTUNE_KEYSTORE")?.takeIf { it.isNotBlank() 
 
 android {
     namespace = "app.ytune"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.ytune"
         minSdk = 26
-        targetSdk = 35
+        // Android 16: Nothing's Glyph service only waives its API-key check for apps targeting it.
+        targetSdk = 36
         versionCode = releaseVersionCode ?: runNumber
         versionName = releaseVersionName ?: "0.dev.$runNumber"
         buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")

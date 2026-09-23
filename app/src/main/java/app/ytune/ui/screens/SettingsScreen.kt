@@ -1,6 +1,7 @@
 package app.ytune.ui.screens
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +36,10 @@ import app.ytune.data.AudioQuality
 import app.ytune.data.DownloadStrategy
 import app.ytune.data.StreamMode
 import app.ytune.data.formatBytes
+import app.ytune.glyph.GlyphLink
+import app.ytune.glyph.GlyphStatus
 import app.ytune.glyph.GlyphSupport
+import app.ytune.glyph.GlyphTest
 import app.ytune.playback.StreamCache
 import app.ytune.ui.components.GlyphMatrixPreview
 import app.ytune.ui.components.PillStyle
@@ -213,14 +217,28 @@ private fun Line(title: String, description: String, control: @Composable () -> 
 @Composable
 private fun GlyphSection(enabled: Boolean) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val matrix = GlyphSupport.matrixSize.takeIf { it > 0 } ?: 25
     Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
         GlyphMatrixPreview(matrix, Modifier.size(150.dp))
     }
-    if (GlyphSupport.isSupported) {
-        Line("Scroll the title on the Glyph Matrix", "While music plays, the back of the phone shows title · artist and a progress bar") {
-            NothingSwitch(enabled, { on -> Graph.settings.update { it.copy(glyphMatrix = on) } })
-        }
+    if (!GlyphSupport.isSupported) {
+        Text(
+            "Preview only: the Glyph Matrix is on Nothing Phone (3) and Phone (4a) Pro. " +
+                "This phone: ${Build.MANUFACTURER} ${Build.MODEL}.",
+            style = Type.label,
+            color = P.textDim,
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
+        return
+    }
+    val status by GlyphLink.status.collectAsStateWithLifecycle()
+    val testing by GlyphTest.running.collectAsStateWithLifecycle()
+
+    Line("Scroll the title on the Glyph Matrix", "While music plays, the back of the phone shows title · artist and a progress bar") {
+        NothingSwitch(enabled, { on -> Graph.settings.update { it.copy(glyphMatrix = on) } })
+    }
+    if (GlyphSupport.hasGlyphTouch) {
         Line("YTune Glyph Toy", "Add it to the Glyph Button carousel · long-press the Glyph Button to play / pause") {
             PillButton("Add", {
                 if (!GlyphSupport.openToysManager(context)) {
@@ -229,13 +247,62 @@ private fun GlyphSection(enabled: Boolean) {
             })
         }
     } else {
+        Line(
+            "Always-on Glyph Toy",
+            "Also show it with the phone face down: Settings › Glyph Interface › Flip to Glyph › " +
+                "Always-on Glyph Toy › YTune",
+        ) {
+            PillButton("Open", {
+                if (!GlyphSupport.openToysManager(context)) {
+                    runCatching {
+                        context.startActivity(
+                            Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                    Graph.toast("Glyph Interface › Flip to Glyph › Always-on Glyph Toy › YTune")
+                }
+            })
+        }
+    }
+    Line("Test the matrix", if (testing) "Look at the back of the phone…" else "Scrolls a test message for 8 seconds") {
+        PillButton(if (testing) "Testing" else "Test", { scope.launch { GlyphTest.run(context) } }, enabled = !testing)
+    }
+    GlyphDiagnostics(status)
+}
+
+/** What the Glyph service told us, so a dark matrix can be explained (and reported). */
+@Composable
+private fun GlyphDiagnostics(s: GlyphStatus) {
+    fun mark(ok: Boolean?) = when (ok) {
+        true -> "OK"
+        false -> "NO"
+        null -> "–"
+    }
+    val (hint, problem) = when {
+        s.error != null -> s.error to true
+        s.serviceFound == false ->
+            "Nothing's Glyph service isn't reachable. Update the phone (Settings › System › System update)." to true
+        s.registered == false ->
+            "The Glyph service refused YTune. Check that Glyph Interface is on and the phone is up to date." to true
+        s.connected && s.appFrames + s.toyFrames > 0 ->
+            "Connected and sending. If the matrix stays dark, check that Glyph Interface is on; " +
+                "notifications and other Glyph effects take priority over apps." to false
+        s.connected -> "Connected." to false
+        s.linking -> "Waiting for Nothing's Glyph service to answer…" to false
+        else -> "Tap Test, or play something, to connect." to false
+    }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
         Text(
-            "Preview only: the Glyph Matrix is on Nothing Phone (3) and Phone (4a) Pro. " +
-                "This phone: ${Build.MANUFACTURER} ${Build.MODEL}.",
+            "${GlyphSupport.deviceName} · ${GlyphSupport.model} · Android ${Build.VERSION.RELEASE}\n" +
+                "Service ${mark(s.serviceFound)} · link ${mark(s.connected)} · access ${mark(s.registered)}\n" +
+                "Frames: app ${s.appFrames} · toy ${s.toyFrames}" +
+                (if (s.toyBound) " · toy active" else "") +
+                (s.lastToyEvent?.let { " · last event $it" } ?: ""),
             style = Type.label,
-            color = P.textDim,
-            modifier = Modifier.padding(horizontal = 20.dp),
+            color = P.textFaint,
         )
+        Spacer(Modifier.height(6.dp))
+        Text(hint, style = Type.label, color = if (problem) P.saveRed else P.textDim)
     }
 }
 

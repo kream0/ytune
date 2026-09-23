@@ -36,7 +36,10 @@ class GlyphNowPlaying(context: Context, private val scope: CoroutineScope) {
         if (loop?.isActive == true) return
         session.open()
         loop = scope.launch {
-            animator.run(source = { Graph.nowPlaying.value }, output = session::show)
+            animator.run(
+                source = { Graph.nowPlaying.value },
+                output = { if (!GlyphTest.running.value) session.show(it) },
+            )
         }
     }
 

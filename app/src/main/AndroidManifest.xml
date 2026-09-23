@@ -15,6 +15,14 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
 
+    <!-- Nothing's Glyph service, which the Glyph SDK binds to (Android 11+ package visibility). -->
+    <queries>
+        <package android:name="com.nothing.thirdparty" />
+        <intent>
+            <action android:name="com.nothing.thirdparty.bind_glyphservice" />
+        </intent>
+    </queries>
+
     <application
         android:name=".YTuneApp"
         android:allowBackup="false"
@@ -70,7 +78,9 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- Glyph Toy for Nothing Phone (3): now playing on the Glyph Matrix, long-press = play/pause -->
+        <!-- Glyph Toy: now playing on the Glyph Matrix. Phone (3): Glyph Button carousel,
+             long-press = play/pause. Phone (4a) Pro: always-on (AOD) toy, chosen under
+             Settings > Glyph Interface > Flip to Glyph > Always-on Glyph Toy. -->
         <service
             android:name=".glyph.NowPlayingToyService"
             android:exported="true"
@@ -89,6 +99,9 @@
                 android:resource="@string/glyph_toy_summary" />
             <meta-data
                 android:name="com.nothing.glyph.toy.longpress"
+                android:value="1" />
+            <meta-data
+                android:name="com.nothing.glyph.toy.aod_support"
                 android:value="1" />
         </service>
     </application>

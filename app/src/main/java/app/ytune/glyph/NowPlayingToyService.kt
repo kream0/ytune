@@ -18,9 +18,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * "YTune" Glyph Toy. Pick it with the Glyph Button on a Phone (3) and the matrix shows the
- * scrolling title, a live equalizer and a progress bar; long-press the Glyph Button to
- * play / pause. Toys outrank the app channel, so this also works over other Glyph content.
+ * "YTune" Glyph Toy: the scrolling title, a progress bar and (on the Phone (3)) a live equalizer.
+ *
+ * - Phone (3): pick it with the Glyph Button; long-press the button to play / pause. Toys
+ *   outrank the app channel, so this also works over other Glyph content.
+ * - Phone (4a) Pro: only always-on (AOD) toys exist there. Choose it under Settings › Glyph
+ *   Interface › Flip to Glyph › Always-on Glyph Toy; the system then sends EVENT_AOD every minute.
  */
 class NowPlayingToyService : Service() {
 
@@ -34,8 +37,11 @@ class NowPlayingToyService : Service() {
                 super.handleMessage(msg)
                 return
             }
-            when (msg.data?.getString(GlyphToy.MSG_GLYPH_TOY_DATA)) {
+            val event = msg.data?.getString(GlyphToy.MSG_GLYPH_TOY_DATA) ?: return
+            GlyphLink.toyEvent(event)
+            when (event) {
                 GlyphToy.EVENT_CHANGE -> Graph.player.togglePlay() // long press
+                GlyphToy.EVENT_AOD -> session?.refresh() // always-on wake-up: repaint now
             }
         }
     }
@@ -50,12 +56,15 @@ class NowPlayingToyService : Service() {
                 fallback = Raster::columns,
                 clock = SystemClock::elapsedRealtime,
             )
+            // Without a Glyph Button (4a Pro) there's nothing to hold, and an always-on toy
+            // should sit still while the music is paused.
+            val touch = GlyphSupport.hasGlyphTouch
             loop = scope.launch {
                 animator.run(
                     source = { Graph.nowPlaying.value },
-                    output = s::show,
-                    idleLabel = "YTUNE  ·  HOLD TO PLAY",
-                    scrollWhenPaused = true,
+                    output = { s.show(it) },
+                    idleLabel = if (touch) "YTUNE  ·  HOLD TO PLAY" else "YTUNE",
+                    scrollWhenPaused = touch,
                 )
             }
         }

@@ -41,10 +41,16 @@ class GlyphAnimator(
                 if (it.durationMs > 0) it.positionAt(clock()).toFloat() / it.durationMs else 0f
             } ?: 0f
 
+            val scrolling = renderer.needsScroll(strip) && (playing || scrollWhenPaused)
+            if (!scrolling && scroll != rest) {
+                scroll = rest // paused mid-scroll: show the title from its start
+                hold = HOLD_FRAMES
+            }
+
             output(renderer.render(strip, scroll, progress, playing, tick))
             tick++
 
-            if (renderer.needsScroll(strip) && (playing || scrollWhenPaused)) {
+            if (scrolling) {
                 if (hold > 0) {
                     hold--
                 } else {
@@ -52,12 +58,14 @@ class GlyphAnimator(
                     if (scroll == rest) hold = HOLD_FRAMES
                 }
             }
-            delay(FRAME_MS)
+            // A paused, still picture only needs checking for changes now and then.
+            delay(if (playing || scrolling) FRAME_MS else IDLE_FRAME_MS)
         }
     }
 
     companion object {
         const val FRAME_MS = 70L
+        private const val IDLE_FRAME_MS = 250L
         private const val HOLD_FRAMES = 20
         /** Text rests two dots in from the left edge, clear of the round matrix's rim. */
         private const val LEAD = 2

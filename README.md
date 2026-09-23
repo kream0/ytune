@@ -18,10 +18,12 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
 
 ## Glyph Matrix (Nothing Phone (3) / (4a) Pro)
 
-- **While music plays**, the back of the phone scrolls *title · artist* in a dot-matrix font (the same Doto dots as the app), with a small equalizer on top and a progress bar underneath. It clears when you pause. Toggle it in *Settings → Glyph Matrix*, where you also get a live on-screen preview.
-- **YTune Glyph Toy:** in *Settings → Glyph Matrix → Add*, add "YTune · Now playing" to the Glyph Button carousel. Select it with a short press on the Glyph Button; **long-press to play / pause**. Toys outrank app content on the matrix, so use the toy if something else keeps taking over the display.
+- **While music plays**, the back of the phone scrolls *title · artist* in a dot-matrix font (the same Doto dots as the app), with a progress bar underneath (and a small equalizer on the Phone (3)'s bigger matrix). It clears when you pause. Toggle it in *Settings → Glyph Matrix*, which also has a live on-screen preview.
+- **Phone (4a) Pro:** third-party toys only exist as always-on toys there. To keep the title on the back with the phone face down, choose *Settings → Glyph Interface → Flip to Glyph → Always-on Glyph Toy → YTune · Now playing*. Nothing else needs setting up.
+- **Phone (3):** in *Settings → Glyph Matrix → Add*, add "YTune · Now playing" to the Glyph Button carousel. Select it with a short press on the Glyph Button; **long-press to play / pause**. Toys outrank app content on the matrix, so use the toy if something else keeps taking over the display.
+- **Test + status:** *Settings → Glyph Matrix → Test* scrolls a test message for 8 seconds. The lines under it show whether Nothing's Glyph service was found, connected and accepted YTune, and how many frames went out. If the matrix stays dark, that's where the reason shows up.
 - Non-Latin titles (CJK, Cyrillic, …) fall back to the system font squeezed onto the matrix; emoji are skipped.
-- Nothing's Glyph SDK is closed source and can't be redistributed, so it isn't in this repo: the build downloads it from [Nothing's Glyph-Developer-Kit](https://github.com/Nothing-Developer-Programme/Glyph-Developer-Kit) at a pinned commit and checks its SHA-256. If the matrix stays dark on older firmware, enable Glyph debugging once with `adb shell settings put global nt_glyph_interface_debug_enable 1`. That toggle expires after 48 hours; Android 16 removed the need for it.
+- The app targets Android 16 because Nothing's Glyph service only waives its API key for apps that do. Nothing's Glyph SDK is closed source and can't be redistributed, so it isn't in this repo: the build downloads it from [Nothing's Glyph-Developer-Kit](https://github.com/Nothing-Developer-Programme/Glyph-Developer-Kit) at a pinned commit and checks its SHA-256.
 
 ## Updates
 

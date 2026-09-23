@@ -10,47 +10,65 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
-import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import kotlin.math.ceil
 
 /**
- * Detects a Glyph Matrix (Phone (3): 25×25, Phone (4a) Pro: 13×13). The Nothing SDK is only
- * touched on Nothing phones running Android 14+, so other devices never load it.
+ * Detects a Glyph Matrix (Phone (3): 25×25, Phone (4a) Pro: 13×13) from the model number, the
+ * same way Nothing's SDK does but tolerant of regional variants. The SDK itself is only touched
+ * on those phones (Android 14+), so other devices never load it.
  */
 object GlyphSupport {
+    private const val SERVICE_PACKAGE = "com.nothing.thirdparty"
+    private const val SERVICE_CLASS = "com.nothing.thirdparty.GlyphService"
+
+    val model: String get() = Build.MODEL.orEmpty()
 
     val matrixSize: Int by lazy {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return@lazy 0
         if (!Build.MANUFACTURER.equals("Nothing", ignoreCase = true)) return@lazy 0
-        runCatching {
-            when {
-                Common.is23112() -> 25
-                Common.is25111p() -> 13
-                else -> 0
-            }
-        }.getOrDefault(0)
+        val m = model.uppercase()
+        when {
+            "A024" in m -> 25 // Phone (3)
+            "A069P" in m -> 13 // Phone (4a) Pro
+            else -> 0
+        }
     }
 
     val isSupported: Boolean get() = matrixSize > 0
 
+    /** Phone (3) has the Glyph Button (toy carousel, long-press); the 4a Pro only has always-on toys. */
+    val hasGlyphTouch: Boolean get() = matrixSize == 25
+
+    val deviceName: String
+        get() = when (matrixSize) {
+            25 -> "Phone (3)"
+            13 -> "Phone (4a) Pro"
+            else -> "${Build.MANUFACTURER} $model"
+        }
+
     fun deviceId(): String? = runCatching {
-        when {
-            Common.is23112() -> Glyph.DEVICE_23112
-            Common.is25111p() -> Glyph.DEVICE_25111p
+        when (matrixSize) {
+            25 -> Glyph.DEVICE_23112
+            13 -> Glyph.DEVICE_25111p
             else -> null
         }
     }.getOrNull()
+
+    /** Whether Nothing's Glyph service exists on this phone and we're allowed to see it. */
+    fun serviceInstalled(context: Context): Boolean = runCatching {
+        context.packageManager.resolveService(
+            Intent().setComponent(ComponentName(SERVICE_PACKAGE, SERVICE_CLASS)),
+            0,
+        ) != null
+    }.getOrDefault(false)
 
     /** Opens the system "Manage Glyph Toys" screen so the user can add the YTune toy. */
     fun openToysManager(context: Context): Boolean = try {
         context.startActivity(
             Intent()
                 .setComponent(
-                    ComponentName(
-                        "com.nothing.thirdparty",
-                        "com.nothing.thirdparty.matrix.toys.manager.ToysManagerActivity",
-                    )
+                    ComponentName(SERVICE_PACKAGE, "$SERVICE_PACKAGE.matrix.toys.manager.ToysManagerActivity")
                 )
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
