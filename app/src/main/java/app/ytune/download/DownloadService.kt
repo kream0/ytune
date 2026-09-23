@@ -22,7 +22,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
 
 /**
@@ -44,7 +43,7 @@ class DownloadService : Service() {
 
         if (observer == null) {
             observer = scope.launch {
-                Graph.downloads.tasks.conflate().collect { tasks ->
+                Graph.downloads.tasks.collect { tasks ->
                     if (tasks.values.none { it.isActive }) {
                         ServiceCompat.stopForeground(this@DownloadService, ServiceCompat.STOP_FOREGROUND_REMOVE)
                         stopSelf()
