@@ -12,6 +12,17 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
 - **Player:** queue, shuffle, repeat, seek, a dot-matrix seek bar and "halftone" dot artwork. Tap the cover to switch to the photo.
 - **Headset and Nothing Ear controls:** playback runs in a Media3 `MediaSession`, so it works from Bluetooth media keys (play/pause, next, previous), the lock screen and the notification. It pauses when the earbuds disconnect or come out, and pressing play with the app closed resumes your last queue.
 
+## Glyph Matrix (Nothing Phone (3) / (4a) Pro)
+
+- **While music plays**, the back of the phone scrolls *title · artist* in a dot-matrix font (the same Doto dots as the app), with a small equalizer on top and a progress bar underneath. It clears when you pause. Toggle it in *Settings → Glyph Matrix*, where you also get a live on-screen preview.
+- **YTune Glyph Toy:** in *Settings → Glyph Matrix → Add*, add "YTune · Now playing" to the Glyph Button carousel. Select it with a short press on the Glyph Button; **long-press to play / pause**. Toys outrank app content on the matrix, so use the toy if something else keeps taking over the display.
+- Non-Latin titles (CJK, Cyrillic, …) fall back to the system font squeezed onto the matrix; emoji are skipped.
+- Nothing's Glyph SDK is closed source and can't be redistributed, so it isn't in this repo: the build downloads it from [Nothing's Glyph-Developer-Kit](https://github.com/Nothing-Developer-Programme/Glyph-Developer-Kit) at a pinned commit and checks its SHA-256. If the matrix stays dark on older firmware, enable Glyph debugging once with `adb shell settings put global nt_glyph_interface_debug_enable 1`. That toggle expires after 48 hours; Android 16 removed the need for it.
+
+## Updates
+
+The app checks the `latest` release when it starts (at most every 3 hours), downloads newer builds in the background, verifies them against the SHA-256 in `version.json`, and then asks whether to install. Android shows its own confirmation. The first time, it asks you to let YTune install apps. You can also check manually in *Settings → Updates*, or turn off auto-download.
+
 ## Install
 
 Every push builds a signed APK and publishes it as the rolling **`latest`** release:

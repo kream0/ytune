@@ -60,16 +60,30 @@ jobs:
           echo "==== ERRORS ===="
           grep -E "^e: |error:|What went wrong|Could not (find|resolve)" -A 2 build.log | head -120 || true
 
-      - name: Collect APK
+      - name: Collect APK + version manifest
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk dist/ytune.apk
+          # Read by the in-app updater to decide whether a newer build exists.
+          jq -n \
+            --argjson code "$GITHUB_RUN_NUMBER" \
+            --arg name "1.0.$GITHUB_RUN_NUMBER" \
+            --arg commit "${GITHUB_SHA::7}" \
+            --arg branch "$GITHUB_REF_NAME" \
+            --arg notes "$(git log -1 --format=%s)" \
+            --arg sha256 "$(sha256sum dist/ytune.apk | cut -d' ' -f1)" \
+            --argjson size "$(stat -c %s dist/ytune.apk)" \
+            '{versionCode: $code, versionName: $name, commit: $commit, branch: $branch, notes: $notes, sha256: $sha256, size: $size}' \
+            > dist/version.json
+          cat dist/version.json
           ls -la dist
 
       - uses: actions/upload-artifact@v7
         with:
           name: ytune-${{ github.run_number }}
-          path: dist/ytune.apk
+          path: |
+            dist/ytune.apk
+            dist/version.json
 
       - name: Publish rolling "latest" release
         env:
@@ -77,7 +91,7 @@ jobs:
         run: |
           NOTES="Build #${GITHUB_RUN_NUMBER} from \`${GITHUB_REF_NAME}\` @ ${GITHUB_SHA::7}. Open this page on your phone and tap ytune.apk to install."
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest dist/ytune.apk \
+          gh release create latest dist/ytune.apk dist/version.json \
             --target "$GITHUB_SHA" \
             --title "YTune — latest build (#${GITHUB_RUN_NUMBER})" \
             --notes "$NOTES" \

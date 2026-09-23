@@ -8,6 +8,25 @@ plugins {
 // CI passes the run number so every build installs over the previous one.
 val buildNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
 
+// Nothing's Glyph Matrix SDK is a closed-source AAR whose licence doesn't allow
+// redistribution, so it isn't committed: it's fetched from Nothing's official repo at a
+// pinned commit and checked against a known SHA-256.
+val glyphSdk = file("libs/glyph-matrix-sdk-2.0.aar")
+if (!glyphSdk.exists()) {
+    val url = "https://raw.githubusercontent.com/Nothing-Developer-Programme/Glyph-Developer-Kit/" +
+        "8ee807a9312a640b0d43051450924e3446bc1d78/sdk/glyph-matrix-sdk-2.0.aar"
+    val bytes = java.net.URI(url).toURL().readBytes()
+    val sha = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    check(sha == "329393019db5f0f987c6245855d13fa273d06756c68829ca0f6ae686ba336da1") {
+        "Unexpected checksum for the Glyph SDK download ($sha)"
+    }
+    glyphSdk.parentFile.mkdirs()
+    glyphSdk.writeBytes(bytes)
+}
+
+// Where the in-app updater looks for new builds (the rolling "latest" release).
+val updateRepo = System.getenv("GITHUB_REPOSITORY") ?: "kream0/ytune"
+
 // A private keystore can be supplied through env vars (see README / the CI workflow).
 // Without one, builds are signed with the public dev key in /keystore so updates still
 // install over each other.
@@ -23,6 +42,7 @@ android {
         targetSdk = 35
         versionCode = buildNumber
         versionName = "1.0.$buildNumber"
+        buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
     }
 
     signingConfigs {
@@ -113,4 +133,5 @@ dependencies {
     implementation(libs.coil.compose)
 
     implementation(libs.newpipe.extractor)
+    implementation(files(glyphSdk))
 }

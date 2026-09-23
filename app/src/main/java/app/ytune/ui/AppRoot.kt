@@ -1,5 +1,6 @@
 package app.ytune.ui
 
+import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,6 +50,8 @@ import app.ytune.ui.components.DlSnapshot
 import app.ytune.ui.components.DotGlyphs
 import app.ytune.ui.components.DotIcon
 import app.ytune.ui.components.DotProgressBar
+import app.ytune.ui.components.Ic
+import app.ytune.ui.components.SheetAction
 import app.ytune.ui.components.LocalDl
 import app.ytune.ui.components.LocalSheets
 import app.ytune.ui.components.SheetHost
@@ -59,6 +63,7 @@ import app.ytune.ui.screens.SearchScreen
 import app.ytune.ui.screens.SettingsScreen
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
+import app.ytune.update.UpdateState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
@@ -70,6 +75,23 @@ fun AppRoot(app: AppViewModel) {
     val dl = remember(library.audio, tasks) { DlSnapshot(library.audio.keys, tasks) }
     var sheet by remember { mutableStateOf<SheetSpec?>(null) }
     val openSheet: (SheetSpec) -> Unit = remember { { sheet = it } }
+
+    // A new build finished downloading in the background: offer to install it (once per build).
+    val update by Graph.updater.state.collectAsStateWithLifecycle()
+    val activity = LocalContext.current as? Activity
+    LaunchedEffect(update) {
+        val ready = update as? UpdateState.Ready ?: return@LaunchedEffect
+        if (Graph.updater.dismissedVersion == ready.remote.versionCode || activity == null) return@LaunchedEffect
+        Graph.updater.dismissedVersion = ready.remote.versionCode
+        sheet = SheetSpec(
+            title = "Update ready · build #${ready.remote.versionCode}",
+            subtitle = ready.remote.notes.ifBlank { "A newer YTune build is downloaded" },
+            actions = listOf(
+                SheetAction("Install now", Ic.Download) { Graph.updater.install(activity) },
+                SheetAction("Later", Ic.Close) {},
+            ),
+        )
+    }
 
     CompositionLocalProvider(LocalDl provides dl, LocalSheets provides openSheet) {
         Box(Modifier.fillMaxSize().background(P.background)) {

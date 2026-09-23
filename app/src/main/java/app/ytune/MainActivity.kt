@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         Graph.player.connect()
+        Graph.updater.checkIfDue()
     }
 
     override fun onStop() {
@@ -57,11 +58,13 @@ class MainActivity : ComponentActivity() {
             ACTION_OPEN_PLAYER -> appViewModel.nowPlaying = true
             ACTION_OPEN_DOWNLOADS -> appViewModel.openDownloads()
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let(appViewModel::handleSharedText)
+            ACTION_INSTALL_STATUS -> Graph.updater.onInstallStatus(this, intent)
         }
     }
 
     companion object {
         const val ACTION_OPEN_PLAYER = "app.ytune.OPEN_PLAYER"
         const val ACTION_OPEN_DOWNLOADS = "app.ytune.OPEN_DOWNLOADS"
+        const val ACTION_INSTALL_STATUS = "app.ytune.INSTALL_STATUS"
     }
 }

@@ -1,5 +1,8 @@
 package app.ytune.ui.screens
 
+import android.app.Activity
+import android.os.Build
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -8,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -31,7 +35,13 @@ import app.ytune.data.AudioQuality
 import app.ytune.data.DownloadStrategy
 import app.ytune.data.StreamMode
 import app.ytune.data.formatBytes
+import app.ytune.glyph.GlyphSupport
 import app.ytune.playback.StreamCache
+import app.ytune.ui.components.GlyphMatrixPreview
+import app.ytune.ui.components.PillStyle
+import app.ytune.update.UpdateState
+import java.text.DateFormat
+import java.util.Date
 import app.ytune.ui.components.Ic
 import app.ytune.ui.components.LocalSheets
 import app.ytune.ui.components.NothingSwitch
@@ -134,6 +144,14 @@ fun SettingsScreen() {
             }
         }
 
+        Section("Glyph Matrix") {
+            GlyphSection(settings.glyphMatrix)
+        }
+
+        Section("Updates") {
+            UpdatesSection(settings.autoUpdate)
+        }
+
         Section("Controls") {
             Text(
                 "Playback runs in a media session, so the notification, lock screen and any Bluetooth " +
@@ -149,7 +167,7 @@ fun SettingsScreen() {
         Section("About") {
             Text(
                 "YTune ${BuildConfig.VERSION_NAME}\nExtraction: NewPipeExtractor (GPLv3) · Playback: AndroidX Media3\n" +
-                    "Fonts: Doto, Space Grotesk, Space Mono (OFL)",
+                    "Fonts: Doto, Space Grotesk, Space Mono (OFL) · Glyph Matrix SDK © Nothing",
                 style = Type.label,
                 color = P.textFaint,
                 modifier = Modifier.padding(horizontal = 20.dp),
@@ -189,5 +207,62 @@ private fun Line(title: String, description: String, control: @Composable () -> 
         }
         Spacer(Modifier.width(12.dp))
         control()
+    }
+}
+
+@Composable
+private fun GlyphSection(enabled: Boolean) {
+    val context = LocalContext.current
+    val matrix = GlyphSupport.matrixSize.takeIf { it > 0 } ?: 25
+    Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+        GlyphMatrixPreview(matrix, Modifier.size(150.dp))
+    }
+    if (GlyphSupport.isSupported) {
+        Line("Scroll the title on the Glyph Matrix", "While music plays, the back of the phone shows title · artist and a progress bar") {
+            NothingSwitch(enabled, { on -> Graph.settings.update { it.copy(glyphMatrix = on) } })
+        }
+        Line("YTune Glyph Toy", "Add it to the Glyph Button carousel · long-press the Glyph Button to play / pause") {
+            PillButton("Add", {
+                if (!GlyphSupport.openToysManager(context)) {
+                    Graph.toast("Open Settings › Glyph Interface › Glyph Toys and add YTune")
+                }
+            })
+        }
+    } else {
+        Text(
+            "Preview only: the Glyph Matrix is on Nothing Phone (3) and Phone (4a) Pro. " +
+                "This phone: ${Build.MANUFACTURER} ${Build.MODEL}.",
+            style = Type.label,
+            color = P.textDim,
+            modifier = Modifier.padding(horizontal = 20.dp),
+        )
+    }
+}
+
+@Composable
+private fun UpdatesSection(autoUpdate: Boolean) {
+    val context = LocalContext.current
+    val state by Graph.updater.state.collectAsStateWithLifecycle()
+    val last = Graph.updater.lastChecked
+    val status = when (val s = state) {
+        UpdateState.Idle, UpdateState.UpToDate ->
+            if (last > 0) "Up to date · checked ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(last))}"
+            else "Not checked yet"
+        UpdateState.Checking -> "Checking…"
+        is UpdateState.Available -> "Build #${s.remote.versionCode} available"
+        is UpdateState.Downloading -> "Downloading build #${s.remote.versionCode} · ${(s.progress * 100).toInt()}%"
+        is UpdateState.Ready -> "Build #${s.remote.versionCode} ready to install"
+        is UpdateState.Failed -> "Update check failed: ${s.message}"
+    }
+    Line("YTune ${Graph.updater.currentVersion}", status) {
+        when (val s = state) {
+            is UpdateState.Ready -> PillButton("Install", { (context as? Activity)?.let { Graph.updater.install(it) } }, style = PillStyle.Accent)
+            is UpdateState.Available -> PillButton("Get", { Graph.updater.startDownload() })
+            UpdateState.Checking, is UpdateState.Downloading -> Unit
+            else -> PillButton("Check", { Graph.updater.check(manual = true) })
+        }
+    }
+    Line("Auto-download updates", "Fetch new builds in the background, then ask before installing") {
+        NothingSwitch(autoUpdate, { on -> Graph.settings.update { it.copy(autoUpdate = on) } })
     }
 }

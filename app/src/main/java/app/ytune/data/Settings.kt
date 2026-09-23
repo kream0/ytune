@@ -36,6 +36,8 @@ data class AppSettings(
     val parallel: Int = 2,
     val dotArtwork: Boolean = true,
     val searchFilter: String = "SONGS",
+    val glyphMatrix: Boolean = true,
+    val autoUpdate: Boolean = true,
 ) {
     val downloadWhileStreaming: Boolean get() = mode == StreamMode.STREAM_AND_DOWNLOAD
 }
@@ -63,6 +65,8 @@ class Settings(context: Context) {
             parallel = prefs.getInt("parallel", d.parallel).coerceIn(1, 4),
             dotArtwork = prefs.getBoolean("dotArtwork", d.dotArtwork),
             searchFilter = prefs.getString("searchFilter", d.searchFilter) ?: d.searchFilter,
+            glyphMatrix = prefs.getBoolean("glyphMatrix", d.glyphMatrix),
+            autoUpdate = prefs.getBoolean("autoUpdate", d.autoUpdate),
         )
     }
 
@@ -76,6 +80,8 @@ class Settings(context: Context) {
             .putInt("parallel", s.parallel)
             .putBoolean("dotArtwork", s.dotArtwork)
             .putString("searchFilter", s.searchFilter)
+            .putBoolean("glyphMatrix", s.glyphMatrix)
+            .putBoolean("autoUpdate", s.autoUpdate)
             .apply()
     }
 

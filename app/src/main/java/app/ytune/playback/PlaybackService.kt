@@ -4,6 +4,7 @@ package app.ytune.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -25,6 +26,9 @@ import app.ytune.Graph
 import app.ytune.MainActivity
 import app.ytune.R
 import app.ytune.data.DownloadStrategy
+import app.ytune.glyph.GlyphNowPlaying
+import app.ytune.glyph.GlyphSupport
+import app.ytune.glyph.NowPlayingInfo
 import app.ytune.yt.YouTube
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -49,6 +53,7 @@ class PlaybackService : MediaSessionService() {
     private lateinit var player: ExoPlayer
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var saveJob: Job? = null
+    private var glyph: GlyphNowPlaying? = null
 
     /** Items we already retried once with a fresh stream URL. */
     private val retried = mutableSetOf<String>()
@@ -102,6 +107,11 @@ class PlaybackService : MediaSessionService() {
         )
 
         restoreQueue()
+        publishNowPlaying()
+
+        if (GlyphSupport.isSupported) {
+            glyph = GlyphNowPlaying(this, scope).also { it.start() }
+        }
 
         scope.launch {
             Graph.settings.state
@@ -123,6 +133,9 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         saveQueueNow()
+        glyph?.release()
+        glyph = null
+        Graph.nowPlaying.value = null
         scope.cancel()
         session?.let {
             it.player.release()
@@ -135,6 +148,8 @@ class PlaybackService : MediaSessionService() {
     // ------------------------------------------------------------------ listener
 
     private val listener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) = publishNowPlaying()
+
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             autoDownload()
             scheduleSave()
@@ -192,6 +207,23 @@ class PlaybackService : MediaSessionService() {
             player.prepare()
         } else {
             player.pause()
+        }
+    }
+
+    /** Snapshot for the Glyph Matrix (title, play state, position). */
+    private fun publishNowPlaying() {
+        val item = player.currentMediaItem
+        Graph.nowPlaying.value = item?.let {
+            val track = MediaItems.toTrack(it)
+            NowPlayingInfo(
+                id = track.id,
+                title = track.title,
+                artist = track.artist,
+                isPlaying = player.isPlaying,
+                positionMs = player.currentPosition.coerceAtLeast(0),
+                durationMs = player.duration.takeIf { d -> d != C.TIME_UNSET && d > 0 } ?: (track.durationSec * 1000),
+                sampledAt = SystemClock.elapsedRealtime(),
+            )
         }
     }
 
