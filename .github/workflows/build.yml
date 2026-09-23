@@ -1,22 +1,78 @@
 name: Build APK
 
+# Branch pushes: build a test APK (downloadable from the run's artifacts).
+# Releases: publishing a GitHub release, pushing a vX.Y.Z tag, or running this workflow by
+# hand with a version builds that version and attaches ytune.apk + version.json to the
+# release. The app's updater only looks at the latest published (non-pre)release.
 on:
   push:
     branches: ['**']
     tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 1.2.0 (creates tag v1.2.0 and a GitHub release)'
+        required: true
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+  group: build-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      tag: ${{ steps.plan.outputs.tag }}
+      name: ${{ steps.plan.outputs.name }}
+      code: ${{ steps.plan.outputs.code }}
+    steps:
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          MODE=dev; TAG=""
+          case "$EVENT" in
+            release) TAG="$RELEASE_TAG"; MODE=upload ;;
+            workflow_dispatch) TAG="v${INPUT_VERSION#v}"; MODE=create ;;
+            push)
+              if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+                TAG="$GITHUB_REF_NAME"
+                # A release made in the GitHub UI also pushes its tag; that run is handled
+                # by the "release" event instead, so skip here to avoid building twice.
+                if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then MODE=skip; else MODE=create; fi
+              fi ;;
+          esac
+          NAME=""; CODE=""
+          if [ -n "$TAG" ] && [ "$MODE" != skip ]; then
+            V="${TAG#v}"
+            if ! [[ "$V" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "::error::Release tags must look like v1.2.3 (got '$TAG')"; exit 1
+            fi
+            NAME="$V"
+            CODE=$(( 10#${BASH_REMATCH[1]} * 1000000 + 10#${BASH_REMATCH[2]} * 1000 + 10#${BASH_REMATCH[3]} ))
+          fi
+          echo "mode=$MODE tag=$TAG name=$NAME code=$CODE"
+          { echo "mode=$MODE"; echo "tag=$TAG"; echo "name=$NAME"; echo "code=$CODE"; } >> "$GITHUB_OUTPUT"
+
   build:
+    needs: plan
+    if: needs.plan.outputs.mode != 'skip'
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      MODE: ${{ needs.plan.outputs.mode }}
+      TAG: ${{ needs.plan.outputs.tag }}
+      YTUNE_VERSION_NAME: ${{ needs.plan.outputs.name }}
+      YTUNE_VERSION_CODE: ${{ needs.plan.outputs.code }}
     steps:
       - uses: actions/checkout@v6
 
@@ -60,39 +116,51 @@ jobs:
           echo "==== ERRORS ===="
           grep -E "^e: |error:|What went wrong|Could not (find|resolve)" -A 2 build.log | head -120 || true
 
-      - name: Collect APK + version manifest
+      - name: Collect APK
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk dist/ytune.apk
-          # Read by the in-app updater to decide whether a newer build exists.
-          jq -n \
-            --argjson code "$GITHUB_RUN_NUMBER" \
-            --arg name "1.0.$GITHUB_RUN_NUMBER" \
-            --arg commit "${GITHUB_SHA::7}" \
-            --arg branch "$GITHUB_REF_NAME" \
-            --arg notes "$(git log -1 --format=%s)" \
-            --arg sha256 "$(sha256sum dist/ytune.apk | cut -d' ' -f1)" \
-            --argjson size "$(stat -c %s dist/ytune.apk)" \
-            '{versionCode: $code, versionName: $name, commit: $commit, branch: $branch, notes: $notes, sha256: $sha256, size: $size}' \
-            > dist/version.json
-          cat dist/version.json
           ls -la dist
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ytune-${{ github.run_number }}
-          path: |
-            dist/ytune.apk
-            dist/version.json
+          name: ytune-${{ needs.plan.outputs.tag || format('dev-{0}', github.run_number) }}
+          path: dist/ytune.apk
 
-      - name: Publish rolling "latest" release
+      - name: Publish release
+        if: env.MODE == 'create' || env.MODE == 'upload'
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_BODY: ${{ github.event.release.body }}
         run: |
-          NOTES="Build #${GITHUB_RUN_NUMBER} from \`${GITHUB_REF_NAME}\` @ ${GITHUB_SHA::7}. Open this page on your phone and tap ytune.apk to install."
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest dist/ytune.apk dist/version.json \
-            --target "$GITHUB_SHA" \
-            --title "YTune — latest build (#${GITHUB_RUN_NUMBER})" \
-            --notes "$NOTES" \
-            --latest
+          if [ "$MODE" = create ]; then
+            NOTES=$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+              -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" --jq .body 2>/dev/null || true)
+          else
+            NOTES="$RELEASE_BODY"
+          fi
+          [ -n "$NOTES" ] || NOTES="$(git log -1 --format=%s)"
+
+          # Read by the in-app updater: newer versionCode => offer the update.
+          jq -n \
+            --argjson code "$YTUNE_VERSION_CODE" \
+            --arg name "$YTUNE_VERSION_NAME" \
+            --arg tag "$TAG" \
+            --arg commit "${GITHUB_SHA::7}" \
+            --arg notes "${NOTES:0:600}" \
+            --arg sha256 "$(sha256sum dist/ytune.apk | cut -d' ' -f1)" \
+            --argjson size "$(stat -c %s dist/ytune.apk)" \
+            --arg apk "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/ytune.apk" \
+            '{versionCode: $code, versionName: $name, tag: $tag, commit: $commit, notes: $notes, sha256: $sha256, size: $size, apkUrl: $apk}' \
+            > dist/version.json
+          cat dist/version.json
+
+          if [ "$MODE" = create ]; then
+            gh release create "$TAG" dist/ytune.apk dist/version.json \
+              --target "$GITHUB_SHA" --title "YTune $YTUNE_VERSION_NAME" --notes "$NOTES"
+          else
+            gh release upload "$TAG" dist/ytune.apk dist/version.json --clobber
+          fi
+
+          # One-time cleanup of the old rolling "latest" build (replaced by real releases).
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true

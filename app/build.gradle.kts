@@ -8,8 +8,11 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// CI passes the run number so every build installs over the previous one.
-val buildNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+// Release builds get their version from the tag (v1.2.3 -> versionCode 1002003); test builds
+// from branch pushes are "0.dev.<run>" with a small versionCode, so any release updates them.
+val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+val releaseVersionName = System.getenv("YTUNE_VERSION_NAME")?.takeIf { it.isNotBlank() }
+val releaseVersionCode = System.getenv("YTUNE_VERSION_CODE")?.toIntOrNull()
 
 // Nothing's Glyph Matrix SDK is a closed-source AAR whose licence doesn't allow
 // redistribution, so it isn't committed: it's fetched from Nothing's official repo at a
@@ -43,8 +46,8 @@ android {
         applicationId = "app.ytune"
         minSdk = 26
         targetSdk = 35
-        versionCode = buildNumber
-        versionName = "1.0.$buildNumber"
+        versionCode = releaseVersionCode ?: runNumber
+        versionName = releaseVersionName ?: "0.dev.$runNumber"
         buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
     }
 

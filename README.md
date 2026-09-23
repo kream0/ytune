@@ -21,15 +21,23 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
 
 ## Updates
 
-The app checks the `latest` release when it starts (at most every 3 hours), downloads newer builds in the background, verifies them against the SHA-256 in `version.json`, and then asks whether to install. Android shows its own confirmation. The first time, it asks you to let YTune install apps. You can also check manually in *Settings → Updates*, or turn off auto-download.
+The app follows **published releases** (not every push). When it opens (at most every 3 hours), it looks at the repo's latest release. If that version is newer, it downloads the APK in the background, checks the SHA-256 against the `version.json` published with the release, and asks whether to install. Android then shows its own confirmation. The first time, it asks you to let YTune install apps. Pre-releases are ignored, so you can use them for test builds. You can also check manually in *Settings → Updates*, or turn off auto-download.
 
 ## Install
 
-Every push builds a signed APK and publishes it as the rolling **`latest`** release:
+**https://github.com/kream0/ytune/releases/latest/download/ytune.apk**
 
-**https://github.com/kream0/ytune/releases/download/latest/ytune.apk**
+Open that link on your phone, allow "install unknown apps" for your browser, then install. After that the app updates itself from new releases. Requires Android 8.0 or newer.
 
-Open that link on your phone, allow "install unknown apps" for your browser, then install. Later builds install over the top. Requires Android 8.0 or newer.
+## Releasing
+
+Use any of these; each builds the APK and attaches `ytune.apk` + `version.json` to the release:
+
+- **GitHub UI:** *Releases → Draft a new release*, create a tag like `v1.2.0`, then publish.
+- **Git:** `git tag v1.2.0 && git push origin v1.2.0`. The release is created for you, with generated notes.
+- **Actions tab:** run the *Build APK* workflow by hand and enter `1.2.0`.
+
+Tags must look like `vMAJOR.MINOR.PATCH`; the Android versionCode is derived from it (`v1.2.3` → `1002003`). Pushes to branches only build a test APK, which you can download from the workflow run's artifacts. It installs as `0.dev.<run>`, and any release updates it.
 
 ## How it works
 
@@ -50,7 +58,7 @@ YouTube changes things regularly. When search or playback stops working:
 
 1. Check [NewPipeExtractor commits/releases](https://github.com/TeamNewPipe/NewPipeExtractor/commits/dev) for a fix.
 2. Bump `newpipeExtractor` in `gradle/libs.versions.toml` to the new tag or commit hash.
-3. Push. CI rebuilds and republishes `latest`.
+3. Push, then publish a new release (see *Releasing*).
 
 ## Signing
 

@@ -249,9 +249,9 @@ private fun UpdatesSection(autoUpdate: Boolean) {
             if (last > 0) "Up to date · checked ${DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(last))}"
             else "Not checked yet"
         UpdateState.Checking -> "Checking…"
-        is UpdateState.Available -> "Build #${s.remote.versionCode} available"
-        is UpdateState.Downloading -> "Downloading build #${s.remote.versionCode} · ${(s.progress * 100).toInt()}%"
-        is UpdateState.Ready -> "Build #${s.remote.versionCode} ready to install"
+        is UpdateState.Available -> "v${s.remote.versionName} available"
+        is UpdateState.Downloading -> "Downloading v${s.remote.versionName} · ${(s.progress * 100).toInt()}%"
+        is UpdateState.Ready -> "v${s.remote.versionName} ready to install"
         is UpdateState.Failed -> "Update check failed: ${s.message}"
     }
     Line("YTune ${Graph.updater.currentVersion}", status) {
@@ -262,7 +262,7 @@ private fun UpdatesSection(autoUpdate: Boolean) {
             else -> PillButton("Check", { Graph.updater.check(manual = true) })
         }
     }
-    Line("Auto-download updates", "Fetch new builds in the background, then ask before installing") {
+    Line("Auto-download updates", "When a new release is published, download it in the background, then ask before installing") {
         NothingSwitch(autoUpdate, { on -> Graph.settings.update { it.copy(autoUpdate = on) } })
     }
 }

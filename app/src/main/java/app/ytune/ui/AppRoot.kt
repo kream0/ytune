@@ -84,8 +84,8 @@ fun AppRoot(app: AppViewModel) {
         if (Graph.updater.dismissedVersion == ready.remote.versionCode || activity == null) return@LaunchedEffect
         Graph.updater.dismissedVersion = ready.remote.versionCode
         sheet = SheetSpec(
-            title = "Update ready · build #${ready.remote.versionCode}",
-            subtitle = ready.remote.notes.ifBlank { "A newer YTune build is downloaded" },
+            title = "Update ready · v${ready.remote.versionName}",
+            subtitle = ready.remote.headline ?: "A new YTune release is downloaded",
             actions = listOf(
                 SheetAction("Install now", Ic.Download) { Graph.updater.install(activity) },
                 SheetAction("Later", Ic.Close) {},

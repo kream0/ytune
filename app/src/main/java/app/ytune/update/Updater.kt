@@ -37,12 +37,22 @@ import java.security.MessageDigest
 data class RemoteVersion(
     val versionCode: Int,
     val versionName: String,
+    val tag: String = "",
     val commit: String = "",
-    val branch: String = "",
     val notes: String = "",
     val sha256: String = "",
     val size: Long = 0,
-)
+    val apkUrl: String = "",
+) {
+    /** First meaningful line of the release notes, without Markdown decoration. */
+    val headline: String?
+        get() = notes.lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.isNotEmpty() && !it.startsWith("#") }
+            ?.trimStart('*', '-', ' ')
+            ?.replace("**", "")
+            ?.take(140)
+}
 
 sealed interface UpdateState {
     data object Idle : UpdateState
@@ -55,9 +65,9 @@ sealed interface UpdateState {
 }
 
 /**
- * Self-updater for the sideloaded build: polls the rolling `latest` GitHub release, downloads
- * newer APKs in the background (verifying the SHA-256), then hands them to the system
- * installer, which shows its usual "Do you want to update this app?" prompt.
+ * Self-updater for the sideloaded build: polls the repo's latest published GitHub release
+ * (pre-releases are ignored), downloads a newer APK in the background (verifying the SHA-256),
+ * then hands it to the system installer, which shows its usual "update this app?" prompt.
  */
 class Updater(
     private val context: Context,
@@ -71,7 +81,9 @@ class Updater(
     val state: StateFlow<UpdateState> = _state.asStateFlow()
     private var job: Job? = null
 
-    val currentVersion: String get() = "${BuildConfig.VERSION_NAME} (#${BuildConfig.VERSION_CODE})"
+    val currentVersion: String
+        get() = if (BuildConfig.VERSION_NAME.contains("dev")) "test build #${BuildConfig.VERSION_CODE}"
+        else "v${BuildConfig.VERSION_NAME}"
     val lastChecked: Long get() = prefs.getLong(KEY_LAST_CHECK, 0)
 
     /** Version the user said "later" to; we don't nag again for it this session. */
@@ -134,7 +146,8 @@ class Updater(
         try {
             withContext(Dispatchers.IO) {
                 dir.listFiles()?.filter { it != target }?.forEach { it.delete() }
-                val request = Request.Builder().url(BASE_URL + "ytune.apk").cacheControl(CacheControl.FORCE_NETWORK).build()
+                val url = remote.apkUrl.ifBlank { BASE_URL + "ytune.apk" }
+                val request = Request.Builder().url(url).cacheControl(CacheControl.FORCE_NETWORK).build()
                 http.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
                     val body = response.body ?: throw IOException("Empty download")
@@ -258,6 +271,7 @@ class Updater(
         private const val TAG = "Updater"
         private const val KEY_LAST_CHECK = "lastCheck"
         private const val CHECK_INTERVAL_MS = 3 * 60 * 60 * 1000L
-        val BASE_URL: String = "https://github.com/${BuildConfig.UPDATE_REPO}/releases/download/latest/"
+        /** GitHub redirects this to the assets of the newest non-prerelease release. */
+        val BASE_URL: String = "https://github.com/${BuildConfig.UPDATE_REPO}/releases/latest/download/"
     }
 }
