@@ -27,7 +27,7 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
 
 ## Updates
 
-The app follows **published releases** (not every push). When it opens (at most every 3 hours), it looks at the repo's latest release. If that version is newer, it downloads the APK in the background, checks the SHA-256 against the `version.json` published with the release, and asks whether to install. Android then shows its own confirmation. The first time, it asks you to let YTune install apps. Pre-releases are ignored, so you can use them for test builds. You can also check manually in *Settings → Updates*, or turn off auto-download.
+The app follows **published releases** (not every push). Every time you open it, it looks at the repo's latest release. If that version is newer, it downloads the APK in the background, checks the SHA-256 against the `version.json` published with the release, and asks whether to install. Android then shows its own confirmation. The first time, it asks you to let YTune install apps. Pre-releases are ignored, so you can use them for test builds. You can also check manually in *Settings → Updates*, or turn off auto-download.
 
 ## Install
 

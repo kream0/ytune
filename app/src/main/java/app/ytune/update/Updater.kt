@@ -99,7 +99,7 @@ class Updater(
         }
     }
 
-    /** Called on app start: checks at most every few hours unless [force]. */
+    /** Called whenever the app comes to the foreground; skips if it just checked, unless [force]. */
     fun checkIfDue(force: Boolean = false) {
         val due = System.currentTimeMillis() - lastChecked > CHECK_INTERVAL_MS
         if (force || due) check(manual = force)
@@ -108,6 +108,7 @@ class Updater(
     fun check(manual: Boolean) {
         if (job?.isActive == true) return
         job = scope.launch {
+            val previous = _state.value
             _state.value = UpdateState.Checking
             val remote = try {
                 withContext(Dispatchers.IO) { fetchRemote() }
@@ -115,7 +116,8 @@ class Updater(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "update check failed", e)
-                _state.value = if (manual) UpdateState.Failed(e.message ?: "Couldn't reach GitHub") else UpdateState.Idle
+                // A silent check that fails (e.g. offline) keeps what we already knew, like a ready update.
+                _state.value = if (manual) UpdateState.Failed(e.message ?: "Couldn't reach GitHub") else previous
                 return@launch
             }
             prefs.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
@@ -270,7 +272,8 @@ class Updater(
     companion object {
         private const val TAG = "Updater"
         private const val KEY_LAST_CHECK = "lastCheck"
-        private const val CHECK_INTERVAL_MS = 3 * 60 * 60 * 1000L
+        /** Just enough to avoid re-checking when hopping between apps (e.g. to the installer). */
+        private const val CHECK_INTERVAL_MS = 60 * 1000L
         /** GitHub redirects this to the assets of the newest non-prerelease release. */
         val BASE_URL: String = "https://github.com/${BuildConfig.UPDATE_REPO}/releases/latest/download/"
     }
