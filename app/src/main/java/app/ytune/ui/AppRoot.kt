@@ -80,16 +80,7 @@ fun AppRoot(app: AppViewModel) {
                         Tab.LIBRARY -> LibraryScreen(app)
                         Tab.SETTINGS -> SettingsScreen()
                     }
-
-                    var lastPlaylist by remember { mutableStateOf<PlaylistRef?>(null) }
-                    app.playlist?.let { lastPlaylist = it }
-                    AnimatedVisibility(
-                        visible = app.playlist != null,
-                        enter = slideInHorizontally { it / 3 } + fadeIn(),
-                        exit = slideOutHorizontally { it / 3 } + fadeOut(),
-                    ) {
-                        lastPlaylist?.let { ref -> PlaylistScreen(ref, onBack = { app.playlist = null }) }
-                    }
+                    PlaylistOverlay(app)
                 }
                 if (player.current != null) {
                     MiniPlayer(player, onOpen = { app.nowPlaying = true })
@@ -115,6 +106,20 @@ fun AppRoot(app: AppViewModel) {
     }
 
     BackHandler(enabled = app.playlist != null && !app.nowPlaying && sheet == null) { app.playlist = null }
+}
+
+/** Playlist detail slides over the current tab, keeping the mini player and nav visible. */
+@Composable
+private fun PlaylistOverlay(app: AppViewModel) {
+    var lastPlaylist by remember { mutableStateOf<PlaylistRef?>(null) }
+    app.playlist?.let { lastPlaylist = it }
+    AnimatedVisibility(
+        visible = app.playlist != null,
+        enter = slideInHorizontally { it / 3 } + fadeIn(),
+        exit = slideOutHorizontally { it / 3 } + fadeOut(),
+    ) {
+        lastPlaylist?.let { ref -> PlaylistScreen(ref, onBack = { app.playlist = null }) }
+    }
 }
 
 @Composable

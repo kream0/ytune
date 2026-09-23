@@ -120,5 +120,6 @@ fun SheetHost(spec: SheetSpec?, onDismiss: () -> Unit) {
             }
         }
     }
-    BackHandler(enabled = spec != null, onBack = onDismiss)
+    // Registered only while open so it outranks handlers of screens underneath (e.g. the player).
+    if (spec != null) BackHandler(onBack = onDismiss)
 }
