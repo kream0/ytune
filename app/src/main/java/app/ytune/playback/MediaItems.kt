@@ -16,7 +16,18 @@ object MediaItems {
     private const val EXTRA_DURATION = "ytune.duration"
     private const val EXTRA_THUMB = "ytune.thumb"
 
+    private const val PARAM_DISK = "disk"
+
     fun uriFor(id: String): Uri = Uri.parse("$SCHEME://track/$id")
+
+    /**
+     * Same track, different URI: swapping an item to this makes the player re-open it (and the
+     * resolver then picks the downloaded file). The resolver ignores the query.
+     */
+    fun diskUriFor(id: String): Uri = Uri.parse("$SCHEME://track/$id?$PARAM_DISK=1")
+
+    fun isDiskReload(item: MediaItem): Boolean =
+        item.localConfiguration?.uri?.getQueryParameter(PARAM_DISK) != null
 
     fun build(track: Track, artwork: String? = track.thumbnail): MediaItem {
         val extras = Bundle().apply {

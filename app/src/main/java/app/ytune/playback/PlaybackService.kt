@@ -55,6 +55,11 @@ class PlaybackService : MediaSessionService() {
     private var saveJob: Job? = null
     private var glyph: GlyphNowPlaying? = null
 
+    private companion object {
+        /** Less music than this buffered ahead counts as struggling. */
+        const val LOW_BUFFER_MS = 15_000L
+    }
+
     /** Items we already retried once with a fresh stream URL. */
     private val retried = mutableSetOf<String>()
     private var consecutiveFailures = 0
@@ -119,6 +124,18 @@ class PlaybackService : MediaSessionService() {
                 .distinctUntilChanged()
                 .collect { autoDownload() }
         }
+
+        scope.launch {
+            var known: Set<String>? = null
+            Graph.library.data
+                .map { it.audio.keys }
+                .distinctUntilChanged()
+                .collect { keys ->
+                    val saved = known?.let { keys - it }.orEmpty()
+                    known = keys
+                    if (saved.isNotEmpty()) onSaved(saved)
+                }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
@@ -151,6 +168,7 @@ class PlaybackService : MediaSessionService() {
         override fun onEvents(player: Player, events: Player.Events) = publishNowPlaying()
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            OpenedFrom.retainOnly(setOfNotNull(mediaItem?.mediaId, nextItemId()))
             autoDownload()
             scheduleSave()
         }
@@ -180,6 +198,11 @@ class PlaybackService : MediaSessionService() {
             if (playbackState == Player.STATE_READY) {
                 consecutiveFailures = 0
                 player.currentMediaItem?.mediaId?.let { retried.remove(it) }
+            }
+            // Stalled on the network although the song is saved: carry on from the file.
+            if (playbackState == Player.STATE_BUFFERING) {
+                val item = player.currentMediaItem
+                if (item != null && streamingSavedTrack(item)) switchToDisk(player.currentMediaItemIndex)
             }
         }
 
@@ -226,6 +249,51 @@ class PlaybackService : MediaSessionService() {
             )
         }
     }
+
+    // ------------------------------------------------------------------ stream -> file
+
+    /** Songs just finished downloading. */
+    private fun onSaved(ids: Set<String>) {
+        if (player.mediaItemCount == 0) return
+        val index = player.currentMediaItemIndex
+        val current = player.currentMediaItem
+        if (current != null && current.mediaId in ids && streamingSavedTrack(current) && streamStruggling()) {
+            switchToDisk(index)
+        }
+        // The next song may already be preloading from the network: point it at the file.
+        val next = player.nextMediaItemIndex
+        if (next != C.INDEX_UNSET && next != index) {
+            val item = player.getMediaItemAt(next)
+            if (item.mediaId in ids && streamingSavedTrack(item)) switchToDisk(next)
+        }
+    }
+
+    private fun streamingSavedTrack(item: MediaItem): Boolean =
+        !MediaItems.isDiskReload(item) && OpenedFrom.isNetwork(item.mediaId) && Graph.library.isDownloaded(item.mediaId)
+
+    /**
+     * Whether the stream is (about to be) stalling. A healthy one is left alone, since swapping
+     * sources costs a tiny gap; if it stalls later, the buffering check above moves it.
+     */
+    private fun streamStruggling(): Boolean {
+        if (player.playbackState == Player.STATE_BUFFERING) return true
+        val duration = player.duration
+        if (duration != C.TIME_UNSET && player.bufferedPosition >= duration - 1_000) return false
+        return player.bufferedPosition - player.currentPosition < LOW_BUFFER_MS
+    }
+
+    /** Re-opens the item at [index] from its downloaded file, keeping the position if it's playing. */
+    private fun switchToDisk(index: Int) {
+        if (index !in 0 until player.mediaItemCount) return
+        val item = player.getMediaItemAt(index)
+        val isCurrent = index == player.currentMediaItemIndex
+        val position = player.currentPosition
+        player.replaceMediaItem(index, item.buildUpon().setUri(MediaItems.diskUriFor(item.mediaId)).build())
+        if (isCurrent) player.seekTo(index, position)
+    }
+
+    private fun nextItemId(): String? =
+        player.nextMediaItemIndex.takeIf { it != C.INDEX_UNSET }?.let { player.getMediaItemAt(it).mediaId }
 
     // ------------------------------------------------------------------ auto download
 

@@ -18,6 +18,7 @@ import app.ytune.data.Settings
 import app.ytune.yt.YouTube
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 /** Process-wide stream cache (SimpleCache must be a singleton per folder). */
 object StreamCache {
@@ -58,15 +59,41 @@ class TrackResolver(
         val id = uri.lastPathSegment ?: throw IOException("Malformed track uri: $uri")
 
         library.localAudio(id)?.let { local ->
+            OpenedFrom.disk(id)
             return dataSpec.withUri(Uri.fromFile(File(local.path)))
         }
 
         val stream = YouTube.resolve(id, settings.current.quality)
+        OpenedFrom.network(id)
         return dataSpec.buildUpon()
             .setUri(Uri.parse(stream.url))
             .setKey("yt:$id:${stream.itag}")
             .setHttpRequestHeaders(dataSpec.httpRequestHeaders + mapOf("User-Agent" to stream.userAgent))
             .build()
+    }
+}
+
+/**
+ * Which tracks the player last opened from the network rather than a downloaded file. A stream
+ * that's already open keeps reading from the network even after the song finishes downloading,
+ * so the playback service uses this to move it onto the file.
+ */
+object OpenedFrom {
+    private val network: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    fun network(id: String) {
+        network.add(id)
+    }
+
+    fun disk(id: String) {
+        network.remove(id)
+    }
+
+    fun isNetwork(id: String): Boolean = id in network
+
+    /** Forget everything but these (the current and next songs); the rest will be reopened anyway. */
+    fun retainOnly(ids: Set<String>) {
+        network.retainAll(ids)
     }
 }
 
