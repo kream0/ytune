@@ -21,6 +21,7 @@ import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQu
 import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.AudioTrackType
 import org.schabi.newpipe.extractor.stream.DeliveryMethod
+import org.schabi.newpipe.extractor.stream.StreamExtractor
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
 import java.io.IOException
@@ -72,6 +73,7 @@ object YouTube {
 
     private val service get() = ServiceList.YouTube
     private val streamCache = ConcurrentHashMap<String, ResolvedStream>()
+    private val relatedCache = ConcurrentHashMap<String, List<Track>>()
     private val locks = ConcurrentHashMap<String, Any>()
     private val videoIdRegex =
         Regex("""(?:v=|/shorts/|youtu\.be/|/embed/|/live/|/v/)([A-Za-z0-9_-]{11})""")
@@ -109,6 +111,33 @@ object YouTube {
             if (all.size == before) break // no progress (empty or repeating pages)
         }
         return pager.header to all.values.take(limit)
+    }
+
+    // ---------------------------------------------------------------- suggestions
+
+    /**
+     * YouTube's suggestions for a song (the "Up next" list), songs only. Comes for free when the
+     * song was streamed; otherwise costs one page load. Falls back to the song's Mix.
+     */
+    fun suggestionsFor(videoId: String): List<Track> {
+        val related = relatedCache[videoId] ?: runCatching {
+            relatedOf(service.getStreamExtractor(watchUrl(videoId)).also { it.fetchPage() })
+                .also { relatedCache[videoId] = it }
+        }.getOrDefault(emptyList())
+        val songs = related.filter { it.id != videoId && isSongLength(it.durationSec) }
+        if (songs.size >= 3) return songs
+        val mix = runCatching { loadWholePlaylist("${watchUrl(videoId)}&list=RD$videoId", limit = 25).second }
+            .getOrDefault(emptyList())
+            .filter { it.id != videoId && isSongLength(it.durationSec) }
+        return (songs + mix).distinctBy { it.id }
+    }
+
+    /** Songs only: skip long videos (mixes, full albums) and shorts; 0 = length unknown. */
+    private fun isSongLength(seconds: Long) = seconds == 0L || seconds in 45L..900L
+
+    private fun relatedOf(extractor: StreamExtractor): List<Track> {
+        val items: List<InfoItem> = runCatching { extractor.relatedItems?.items?.toList() }.getOrNull() ?: emptyList()
+        return items.filterIsInstance<StreamInfoItem>().mapNotNull { it.toTrack() }
     }
 
     // ---------------------------------------------------------------- streams
@@ -176,6 +205,7 @@ object YouTube {
             userAgent = userAgent,
             expiresAt = expires,
         )
+        relatedOf(extractor).takeIf { it.isNotEmpty() }?.let { relatedCache[videoId] = it }
         val track = Track(
             id = videoId,
             title = runCatching { extractor.name }.getOrNull() ?: videoId,

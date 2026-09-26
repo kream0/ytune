@@ -63,7 +63,9 @@ import app.ytune.ui.components.LocalDl
 import app.ytune.ui.components.LocalSheets
 import app.ytune.ui.components.ModeChip
 import app.ytune.ui.components.ModeOptions
+import app.ytune.ui.components.NothingSwitch
 import app.ytune.ui.components.PillButton
+import app.ytune.ui.components.SectionLabel
 import app.ytune.ui.components.saveLayer
 import app.ytune.ui.components.SheetAction
 import app.ytune.ui.components.SelectionBar
@@ -348,8 +350,10 @@ private fun QueueList(state: PlayerUiState) {
     val sheets = LocalSheets.current
     val dl = LocalDl.current
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (state.currentIndex - 2).coerceAtLeast(0))
+    val settings by Graph.settings.state.collectAsStateWithLifecycle()
     // Keyed by position: the same song can be in the queue twice. Any queue change resets it.
     val selection = rememberSelection<Int>(state.queue)
+    val firstSuggested = state.suggested.filter { it > state.currentIndex }.minOrNull()
     val chosen = { state.queue.filterIndexed { i, _ -> i in selection } }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -376,34 +380,58 @@ private fun QueueList(state: PlayerUiState) {
                     PillButton("Clear", { Graph.player.clearQueue() }, icon = Ic.Delete)
                 }
             }
-            itemsIndexed(state.queue, key = { i, t -> "$i:${t.id}" }) { index, track ->
-                TrackRow(
-                    track = track,
-                    badge = dl.badge(track.id),
-                    artwork = Graph.library.artworkFor(track),
-                    isCurrent = index == state.currentIndex,
-                    isPlaying = state.isPlaying,
-                    selected = selection.rowState(index),
-                    onLongClick = { selection.toggle(index) },
-                    onClick = { if (selection.active) selection.toggle(index) else Graph.player.jumpTo(index) },
-                    onMore = {
-                        sheets(
-                            Actions.trackSheet(
-                                track,
-                                extra = buildList {
-                                    if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.player.move(index, index - 1) })
-                                    if (index < state.queue.size - 1) {
-                                        add(SheetAction("Move down", Ic.ChevronDown) { Graph.player.move(index, index + 1) })
-                                    }
-                                    add(SheetAction("Remove from queue", Ic.Close, destructive = true) { Graph.player.removeAt(index) })
-                                },
-                            )
+            item(key = "autoplay") {
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("AUTOPLAY", style = Type.labelBold, color = P.text)
+                        Text(
+                            if (settings.autoplay) "Suggestions keep playing when the queue ends" else "Stops when the queue ends",
+                            style = Type.label,
+                            color = P.textDim,
                         )
-                    },
-                    trailing = {
-                        IconBtn(Ic.Close, { Graph.player.removeAt(index) }, tint = P.textFaint, size = 36.dp, iconSize = 18.dp)
-                    },
-                )
+                    }
+                    NothingSwitch(settings.autoplay, { on -> Graph.settings.update { it.copy(autoplay = on) } })
+                }
+            }
+            itemsIndexed(state.queue, key = { i, t -> "$i:${t.id}" }) { index, track ->
+                Column {
+                    if (index == firstSuggested) {
+                        SectionLabel(
+                            "Suggested · autoplay",
+                            Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp),
+                        )
+                    }
+                    TrackRow(
+                        track = track,
+                        badge = dl.badge(track.id),
+                        artwork = Graph.library.artworkFor(track),
+                        isCurrent = index == state.currentIndex,
+                        isPlaying = state.isPlaying,
+                        selected = selection.rowState(index),
+                        onLongClick = { selection.toggle(index) },
+                        onClick = { if (selection.active) selection.toggle(index) else Graph.player.jumpTo(index) },
+                        onMore = {
+                            sheets(
+                                Actions.trackSheet(
+                                    track,
+                                    extra = buildList {
+                                        if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.player.move(index, index - 1) })
+                                        if (index < state.queue.size - 1) {
+                                            add(SheetAction("Move down", Ic.ChevronDown) { Graph.player.move(index, index + 1) })
+                                        }
+                                        add(SheetAction("Remove from queue", Ic.Close, destructive = true) { Graph.player.removeAt(index) })
+                                    },
+                                )
+                            )
+                        },
+                        trailing = {
+                            IconBtn(Ic.Close, { Graph.player.removeAt(index) }, tint = P.textFaint, size = 36.dp, iconSize = 18.dp)
+                        },
+                    )
+                }
             }
         }
 

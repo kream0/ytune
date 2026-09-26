@@ -32,6 +32,7 @@ import app.ytune.glyph.NowPlayingInfo
 import app.ytune.yt.YouTube
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -41,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Hosts the ExoPlayer + MediaSession. Media3 wires the session to the system, which is what
@@ -58,7 +60,13 @@ class PlaybackService : MediaSessionService() {
     private companion object {
         /** Less music than this buffered ahead counts as struggling. */
         const val LOW_BUFFER_MS = 15_000L
+        /** Suggestions appended each time the queue is about to run out. */
+        const val SUGGESTIONS_PER_BATCH = 10
     }
+
+    private var suggestJob: Job? = null
+    /** Song we last fetched suggestions for, so each song is only asked about once. */
+    private var suggestedFor: String? = null
 
     /** Items we already retried once with a fresh stream URL. */
     private val retried = mutableSetOf<String>()
@@ -126,6 +134,12 @@ class PlaybackService : MediaSessionService() {
         }
 
         scope.launch {
+            Graph.settings.state.map { it.autoplay }.distinctUntilChanged().collect { on ->
+                if (on) topUpWithSuggestions() else dropUpcomingSuggestions()
+            }
+        }
+
+        scope.launch {
             var known: Set<String>? = null
             Graph.library.data
                 .map { it.audio.keys }
@@ -171,12 +185,14 @@ class PlaybackService : MediaSessionService() {
             OpenedFrom.retainOnly(setOfNotNull(mediaItem?.mediaId, nextItemId()))
             autoDownload()
             scheduleSave()
+            topUpWithSuggestions()
         }
 
         override fun onTimelineChanged(timeline: Timeline, reason: Int) {
             if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
                 autoDownload()
                 scheduleSave()
+                topUpWithSuggestions()
             }
         }
 
@@ -184,7 +200,10 @@ class PlaybackService : MediaSessionService() {
 
         override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) = scheduleSave()
 
-        override fun onRepeatModeChanged(repeatMode: Int) = scheduleSave()
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            scheduleSave()
+            topUpWithSuggestions()
+        }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             // A restored queue isn't prepared yet: prepare lazily on the first "play"
@@ -192,6 +211,7 @@ class PlaybackService : MediaSessionService() {
             if (playWhenReady && player.playbackState == Player.STATE_IDLE && player.mediaItemCount > 0) {
                 player.prepare()
             }
+            if (playWhenReady) topUpWithSuggestions()
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -199,6 +219,8 @@ class PlaybackService : MediaSessionService() {
                 consecutiveFailures = 0
                 player.currentMediaItem?.mediaId?.let { retried.remove(it) }
             }
+            // Ran off the end (suggestions weren't in yet, e.g. offline then): try once more.
+            if (playbackState == Player.STATE_ENDED) topUpWithSuggestions(retry = true)
             // Stalled on the network although the song is saved: carry on from the file.
             if (playbackState == Player.STATE_BUFFERING) {
                 val item = player.currentMediaItem
@@ -295,6 +317,67 @@ class PlaybackService : MediaSessionService() {
     private fun nextItemId(): String? =
         player.nextMediaItemIndex.takeIf { it != C.INDEX_UNSET }?.let { player.getMediaItemAt(it).mediaId }
 
+    // ------------------------------------------------------------------ autoplay
+
+    /**
+     * Autoplay: when at most one song is left, append YouTube's suggestions for the current one
+     * (never songs already in the queue). Runs in both stream modes; suggestions that play get
+     * saved like anything else in "stream + download".
+     */
+    private fun topUpWithSuggestions(retry: Boolean = false) {
+        if (!Graph.settings.current.autoplay || player.repeatMode != Player.REPEAT_MODE_OFF) return
+        if (!player.playWhenReady && !retry) return // e.g. a restored queue nobody pressed play on
+        val seed = player.currentMediaItem?.mediaId ?: return
+        if (upcomingCount() > 1 || suggestJob?.isActive == true) return
+        if (seed == suggestedFor && !retry) return
+        suggestedFor = seed
+        suggestJob = scope.launch {
+            val found = try {
+                withContext(Dispatchers.IO) { YouTube.suggestionsFor(seed) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+            // The user may have moved on or switched autoplay off meanwhile.
+            if (!Graph.settings.current.autoplay || player.mediaItemCount == 0) return@launch
+            val inQueue = (0 until player.mediaItemCount).mapTo(HashSet()) { player.getMediaItemAt(it).mediaId }
+            val picks = found.filter { it.id !in inQueue }.take(SUGGESTIONS_PER_BATCH)
+            if (picks.isEmpty()) return@launch
+            val ended = player.playbackState == Player.STATE_ENDED
+            val first = player.mediaItemCount
+            player.addMediaItems(picks.map { MediaItems.build(it, Graph.library.artworkFor(it), suggested = true) })
+            if (ended) {
+                player.seekTo(first, 0)
+                player.play()
+            }
+        }
+    }
+
+    /** Autoplay switched off: take out the suggestions that haven't played yet. */
+    private fun dropUpcomingSuggestions() {
+        suggestJob?.cancel()
+        suggestedFor = null
+        val from = player.currentMediaItemIndex + 1
+        (player.mediaItemCount - 1 downTo from)
+            .filter { MediaItems.isSuggested(player.getMediaItemAt(it)) }
+            .forEach { player.removeMediaItem(it) }
+    }
+
+    /** Songs still to come after the current one (0, 1 or "2+"), in play order. */
+    private fun upcomingCount(): Int {
+        val timeline = player.currentTimeline
+        if (timeline.isEmpty) return 0
+        var index = player.currentMediaItemIndex
+        var n = 0
+        while (n < 2) {
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
+            if (index == C.INDEX_UNSET) break
+            n++
+        }
+        return n
+    }
+
     // ------------------------------------------------------------------ auto download
 
     /** "Stream + download" mode: mirror the queue to disk, progressively or all at once. */
@@ -305,22 +388,29 @@ class PlaybackService : MediaSessionService() {
         if (count == 0) return
 
         val indices = when (settings.strategy) {
-            DownloadStrategy.ALL_AT_ONCE -> (0 until count).toList()
-            DownloadStrategy.PROGRESSIVE -> {
-                val timeline = player.currentTimeline
-                val result = mutableListOf<Int>()
-                var index = player.currentMediaItemIndex.coerceIn(0, count - 1)
-                result += index
-                while (result.size <= settings.lookahead) {
-                    index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
-                    if (index == C.INDEX_UNSET) break
-                    result += index
-                }
-                result
-            }
+            // What you queued, all of it; autoplay suggestions only as they come up (below).
+            DownloadStrategy.ALL_AT_ONCE ->
+                (0 until count).filterNot { MediaItems.isSuggested(player.getMediaItemAt(it)) } +
+                    upcoming(settings.lookahead)
+            DownloadStrategy.PROGRESSIVE -> upcoming(settings.lookahead)
         }
-        val tracks = indices.map { MediaItems.toTrack(player.getMediaItemAt(it)) }
+        val tracks = indices.distinct().map { MediaItems.toTrack(player.getMediaItemAt(it)) }
         Graph.downloads.enqueue(tracks, auto = true)
+    }
+
+    /** The current song and the next [lookahead] ones, in play order. */
+    private fun upcoming(lookahead: Int): List<Int> {
+        val count = player.mediaItemCount
+        val timeline = player.currentTimeline
+        val result = mutableListOf<Int>()
+        var index = player.currentMediaItemIndex.coerceIn(0, count - 1)
+        result += index
+        while (result.size <= lookahead) {
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, player.shuffleModeEnabled)
+            if (index == C.INDEX_UNSET) break
+            result += index
+        }
+        return result
     }
 
     // ------------------------------------------------------------------ queue persistence

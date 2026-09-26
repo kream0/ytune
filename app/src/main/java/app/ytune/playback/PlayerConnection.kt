@@ -24,6 +24,8 @@ data class PlayerUiState(
     val current: Track? = null,
     val currentIndex: Int = -1,
     val queue: List<Track> = emptyList(),
+    /** Queue positions added by autoplay (YouTube's suggestions) rather than by you. */
+    val suggested: Set<Int> = emptySet(),
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
     val playWhenReady: Boolean = false,
@@ -87,10 +89,12 @@ class PlayerConnection(private val context: Context) {
     private fun refresh(queueChanged: Boolean) {
         val c = controller ?: return
         val count = c.mediaItemCount
-        val queue = if (queueChanged || _state.value.queue.size != count) {
-            (0 until count).map { MediaItems.toTrack(c.getMediaItemAt(it)) }
+        val rebuild = queueChanged || _state.value.queue.size != count
+        val queue = if (rebuild) (0 until count).map { MediaItems.toTrack(c.getMediaItemAt(it)) } else _state.value.queue
+        val suggested = if (rebuild) {
+            (0 until count).filterTo(HashSet()) { MediaItems.isSuggested(c.getMediaItemAt(it)) }
         } else {
-            _state.value.queue
+            _state.value.suggested
         }
         val current = c.currentMediaItem?.let { MediaItems.toTrack(it) }
         val duration = c.duration.takeIf { it != C.TIME_UNSET && it > 0 }
@@ -100,6 +104,7 @@ class PlayerConnection(private val context: Context) {
             current = current,
             currentIndex = if (count > 0) c.currentMediaItemIndex else -1,
             queue = queue,
+            suggested = suggested,
             isPlaying = c.isPlaying,
             isBuffering = c.playbackState == Player.STATE_BUFFERING,
             playWhenReady = c.playWhenReady,
@@ -169,10 +174,14 @@ class PlayerConnection(private val context: Context) {
         if (wasEmpty) c.prepare()
     }
 
+    /** Adds to the end of what you queued: before autoplay's upcoming suggestions, if any. */
     fun enqueue(tracks: List<Track>) = withController { c ->
         if (tracks.isEmpty()) return@withController
         val wasEmpty = c.mediaItemCount == 0
-        c.addMediaItems(tracks.map(::item))
+        val beforeSuggestions = (c.currentMediaItemIndex + 1 until c.mediaItemCount)
+            .firstOrNull { MediaItems.isSuggested(c.getMediaItemAt(it)) }
+        if (beforeSuggestions != null) c.addMediaItems(beforeSuggestions, tracks.map(::item))
+        else c.addMediaItems(tracks.map(::item))
         if (wasEmpty) c.prepare()
     }
 

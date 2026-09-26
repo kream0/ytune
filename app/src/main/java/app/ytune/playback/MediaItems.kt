@@ -15,6 +15,7 @@ object MediaItems {
     const val SCHEME = "ytune"
     private const val EXTRA_DURATION = "ytune.duration"
     private const val EXTRA_THUMB = "ytune.thumb"
+    private const val EXTRA_SUGGESTED = "ytune.suggested"
 
     private const val PARAM_DISK = "disk"
 
@@ -29,10 +30,12 @@ object MediaItems {
     fun isDiskReload(item: MediaItem): Boolean =
         item.localConfiguration?.uri?.getQueryParameter(PARAM_DISK) != null
 
-    fun build(track: Track, artwork: String? = track.thumbnail): MediaItem {
+    /** [suggested]: added by autoplay rather than by you (see [isSuggested]). */
+    fun build(track: Track, artwork: String? = track.thumbnail, suggested: Boolean = false): MediaItem {
         val extras = Bundle().apply {
             putLong(EXTRA_DURATION, track.durationSec)
             putString(EXTRA_THUMB, track.thumbnail)
+            if (suggested) putBoolean(EXTRA_SUGGESTED, true)
         }
         val metadata = MediaMetadata.Builder()
             .setTitle(track.title)
@@ -49,6 +52,8 @@ object MediaItems {
 
     /** Controllers strip URIs when handing items to the session; put ours back. */
     fun withUri(item: MediaItem): MediaItem = item.buildUpon().setUri(uriFor(item.mediaId)).build()
+
+    fun isSuggested(item: MediaItem): Boolean = item.mediaMetadata.extras?.getBoolean(EXTRA_SUGGESTED) == true
 
     fun toTrack(item: MediaItem): Track {
         val m = item.mediaMetadata

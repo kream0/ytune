@@ -38,6 +38,8 @@ data class AppSettings(
     val searchFilter: String = "SONGS",
     val glyphMatrix: Boolean = true,
     val autoUpdate: Boolean = true,
+    /** When the queue runs out, keep going with YouTube's suggestions for the last song. */
+    val autoplay: Boolean = true,
 ) {
     val downloadWhileStreaming: Boolean get() = mode == StreamMode.STREAM_AND_DOWNLOAD
 }
@@ -67,6 +69,7 @@ class Settings(context: Context) {
             searchFilter = prefs.getString("searchFilter", d.searchFilter) ?: d.searchFilter,
             glyphMatrix = prefs.getBoolean("glyphMatrix", d.glyphMatrix),
             autoUpdate = prefs.getBoolean("autoUpdate", d.autoUpdate),
+            autoplay = prefs.getBoolean("autoplay", d.autoplay),
         )
     }
 
@@ -82,6 +85,7 @@ class Settings(context: Context) {
             .putString("searchFilter", s.searchFilter)
             .putBoolean("glyphMatrix", s.glyphMatrix)
             .putBoolean("autoUpdate", s.autoUpdate)
+            .putBoolean("autoplay", s.autoplay)
             .apply()
     }
 
