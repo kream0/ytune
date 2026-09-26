@@ -77,7 +77,7 @@ class PlaybackService : MediaSessionService() {
 
         val remote = CacheDataSource.Factory()
             .setCache(StreamCache.get(this))
-            .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(Graph.http))
+            .setUpstreamDataSourceFactory(ChunkedDataSource.Factory(OkHttpDataSource.Factory(Graph.http)))
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         val local = DefaultDataSource.Factory(this)
         val dataSourceFactory = ResolvingDataSource.Factory(

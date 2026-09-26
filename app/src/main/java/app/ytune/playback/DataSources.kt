@@ -5,6 +5,7 @@ package app.ytune.playback
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSource
@@ -94,6 +95,93 @@ object OpenedFrom {
     /** Forget everything but these (the current and next songs); the rest will be reopened anyway. */
     fun retainOnly(ids: Set<String>) {
         network.retainAll(ids)
+    }
+}
+
+/**
+ * Reads a remote file as consecutive bounded range requests ([chunkSize] bytes each), the way
+ * the downloader does. YouTube throttles one long open-ended request to roughly playback speed,
+ * so any hiccup on the network turned into buffering, while short ranged requests come in at
+ * full speed. Playback still starts as soon as the first bytes arrive.
+ */
+class ChunkedDataSource(private val upstream: DataSource, private val chunkSize: Long) : DataSource {
+    private var spec: DataSpec? = null
+    private var position = 0L // absolute position of the next byte
+    private var end = C.LENGTH_UNSET.toLong() // absolute end of the requested range, if bounded
+    private var total = C.LENGTH_UNSET.toLong() // whole file size, from Content-Range
+    private var chunkRequested = 0L
+    private var chunkRead = 0L
+    private var chunkOpen = false
+
+    override fun addTransferListener(transferListener: TransferListener) = upstream.addTransferListener(transferListener)
+
+    override fun open(dataSpec: DataSpec): Long {
+        spec = dataSpec
+        position = dataSpec.position
+        end = if (dataSpec.length != C.LENGTH_UNSET.toLong()) dataSpec.position + dataSpec.length else C.LENGTH_UNSET.toLong()
+        total = C.LENGTH_UNSET.toLong()
+        openChunk()
+        return when {
+            end != C.LENGTH_UNSET.toLong() -> end - position
+            total != C.LENGTH_UNSET.toLong() -> (total - position).coerceAtLeast(0)
+            else -> C.LENGTH_UNSET.toLong()
+        }
+    }
+
+    /** Opens the next range; false when there's nothing left to read. */
+    private fun openChunk(): Boolean {
+        val s = spec ?: return false
+        var length = chunkSize
+        if (end != C.LENGTH_UNSET.toLong()) length = minOf(length, end - position)
+        if (total != C.LENGTH_UNSET.toLong()) length = minOf(length, total - position)
+        if (length <= 0) return false
+        upstream.open(s.subrange(position - s.position, length))
+        chunkOpen = true
+        chunkRequested = length
+        chunkRead = 0
+        if (total == C.LENGTH_UNSET.toLong()) total = totalFrom(upstream.responseHeaders)
+        return true
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        if (length == 0) return 0
+        while (true) {
+            if (!chunkOpen) return C.RESULT_END_OF_INPUT
+            val n = upstream.read(buffer, offset, length)
+            if (n != C.RESULT_END_OF_INPUT) {
+                position += n
+                chunkRead += n
+                return n
+            }
+            // This range is done: move on to the next one, unless the file ended early.
+            upstream.close()
+            chunkOpen = false
+            if (total == C.LENGTH_UNSET.toLong() && chunkRead < chunkRequested) return C.RESULT_END_OF_INPUT
+            if (chunkRead == 0L || !openChunk()) return C.RESULT_END_OF_INPUT
+        }
+    }
+
+    override fun getUri(): Uri? = upstream.uri
+
+    override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
+
+    override fun close() {
+        spec = null
+        if (chunkOpen) {
+            chunkOpen = false
+            upstream.close()
+        }
+    }
+
+    /** "bytes 0-2097151/3456789" → 3456789. */
+    private fun totalFrom(headers: Map<String, List<String>>): Long =
+        headers.entries.firstOrNull { it.key.equals("Content-Range", ignoreCase = true) }
+            ?.value?.firstOrNull()?.substringAfter('/', "")?.toLongOrNull()
+            ?: C.LENGTH_UNSET.toLong()
+
+    class Factory(private val upstream: DataSource.Factory, private val chunkSize: Long = 2L * 1024 * 1024) :
+        DataSource.Factory {
+        override fun createDataSource(): DataSource = ChunkedDataSource(upstream.createDataSource(), chunkSize)
     }
 }
 
