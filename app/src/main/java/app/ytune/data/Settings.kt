@@ -40,6 +40,8 @@ data class AppSettings(
     val autoUpdate: Boolean = true,
     /** When the queue runs out, keep going with YouTube's suggestions for the last song. */
     val autoplay: Boolean = true,
+    /** Player shows synced lyrics instead of the cover (tap the cover to cycle dots / photo / lyrics). */
+    val lyricsView: Boolean = false,
 ) {
     val downloadWhileStreaming: Boolean get() = mode == StreamMode.STREAM_AND_DOWNLOAD
 }
@@ -70,6 +72,7 @@ class Settings(context: Context) {
             glyphMatrix = prefs.getBoolean("glyphMatrix", d.glyphMatrix),
             autoUpdate = prefs.getBoolean("autoUpdate", d.autoUpdate),
             autoplay = prefs.getBoolean("autoplay", d.autoplay),
+            lyricsView = prefs.getBoolean("lyricsView", d.lyricsView),
         )
     }
 
@@ -86,6 +89,7 @@ class Settings(context: Context) {
             .putBoolean("glyphMatrix", s.glyphMatrix)
             .putBoolean("autoUpdate", s.autoUpdate)
             .putBoolean("autoplay", s.autoplay)
+            .putBoolean("lyricsView", s.lyricsView)
             .apply()
     }
 

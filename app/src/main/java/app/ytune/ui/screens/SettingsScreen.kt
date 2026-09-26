@@ -111,7 +111,7 @@ fun SettingsScreen() {
             Line("Autoplay suggestions", "When the queue runs out, keep playing YouTube's suggestions for the last song. Works when streaming and with STREAM + DL") {
                 NothingSwitch(settings.autoplay, { on -> Graph.settings.update { it.copy(autoplay = on) } })
             }
-            Line("Dot-matrix artwork", "Render cover art as dots on the player (tap the art to switch)") {
+            Line("Dot-matrix artwork", "Render cover art as dots on the player. Tap the cover to cycle dots / photo / lyrics") {
                 NothingSwitch(settings.dotArtwork, { on -> Graph.settings.update { it.copy(dotArtwork = on) } })
             }
         }

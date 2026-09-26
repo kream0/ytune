@@ -16,7 +16,8 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
   - On the seek bar, the dots ahead of the playhead fill with that colour as the track downloads, and the whole bar turns green once it's saved. Grey means stream-only playback buffer.
   - The player shows a chip: `OFFLINE`, `SAVING 42%`, `QUEUED`, `WAITING FOR WI-FI`, `FAILED · RETRY` or `STREAMING · SAVE`. Tap it to save or retry.
   - List rows get a matching ring, or a green dot when the track is saved.
-- **Player:** queue, shuffle, repeat, seek, a dot-matrix seek bar and "halftone" dot artwork. Tap the cover to switch to the photo.
+- **Player:** queue, shuffle, repeat, seek, a dot-matrix seek bar and "halftone" dot artwork. Tap the cover to cycle **dots → photo → lyrics**.
+- **Lyrics:** Spotify-style synced lyrics where the cover was. They scroll on their own, the line being sung fills in karaoke-style (word by word when the lyrics have word timing), sung lines stay lit and upcoming ones are dimmed. Scroll by hand to look around; it catches up again after a few seconds. Long-press a line to jump there. Lyrics come from [LRCLIB](https://lrclib.net), a free, open lyrics database. YouTube titles are cleaned up first ("Artist - Title (Official Video)" → artist + title), and synced lyrics are only used when their length matches the song, otherwise the plain text is shown ("NOT SYNCED"). Lyrics are cached, and songs you save fetch theirs in the background, so they work offline too.
 - **Headset and Nothing Ear controls:** playback runs in a Media3 `MediaSession`, so it works from Bluetooth media keys (play/pause, next, previous), the lock screen and the notification. It pauses when the earbuds disconnect or come out, and pressing play with the app closed resumes your last queue.
 
 ## Glyph Matrix (Nothing Phone (3) / (4a) Pro)

@@ -5,6 +5,7 @@ import app.ytune.data.Library
 import app.ytune.data.Settings
 import app.ytune.download.DownloadManager
 import app.ytune.glyph.NowPlayingInfo
+import app.ytune.lyrics.LyricsRepo
 import app.ytune.playback.PlayerConnection
 import app.ytune.playback.QueueStore
 import app.ytune.update.Updater
@@ -16,6 +17,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -41,6 +45,7 @@ object Graph {
     val player: PlayerConnection by lazy { PlayerConnection(app) }
     val queueStore: QueueStore by lazy { QueueStore(app) }
     val updater: Updater by lazy { Updater(app, http, settings, scope) }
+    val lyrics: LyricsRepo by lazy { LyricsRepo(app, http, scope) }
 
     /** Published by the playback service; read by the Glyph Matrix renderers. */
     val nowPlaying = MutableStateFlow<NowPlayingInfo?>(null)
@@ -55,5 +60,14 @@ object Graph {
     fun init(application: Application) {
         app = application
         YouTube.init(http)
+        // Songs you save get their lyrics too, so they show offline.
+        scope.launch {
+            var known: Set<String>? = null
+            library.data.map { it.audio.keys }.distinctUntilChanged().collect { keys ->
+                val saved = known?.let { keys - it }.orEmpty()
+                known = keys
+                if (saved.isNotEmpty()) lyrics.prefetch(saved.mapNotNull { library.track(it) })
+            }
+        }
     }
 }

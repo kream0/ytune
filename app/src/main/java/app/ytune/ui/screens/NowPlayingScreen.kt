@@ -60,6 +60,7 @@ import app.ytune.ui.components.HalftoneArtwork
 import app.ytune.ui.components.Ic
 import app.ytune.ui.components.IconBtn
 import app.ytune.ui.components.LocalDl
+import app.ytune.ui.components.LyricsView
 import app.ytune.ui.components.LocalSheets
 import app.ytune.ui.components.ModeChip
 import app.ytune.ui.components.ModeOptions
@@ -133,13 +134,45 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                         contentAlignment = Alignment.Center,
                     ) {
                         val side = if (maxWidth < maxHeight) maxWidth else maxHeight
-                        CoverArt(
-                            url = Graph.library.artworkFor(track),
-                            dots = settings.dotArtwork,
-                            playing = state.isPlaying,
-                            modifier = Modifier.size(side),
-                            onToggle = { Graph.settings.update { it.copy(dotArtwork = !it.dotArtwork) } },
-                        )
+                        val mode = when {
+                            settings.lyricsView -> ArtMode.LYRICS
+                            settings.dotArtwork -> ArtMode.DOTS
+                            else -> ArtMode.PHOTO
+                        }
+                        // Tap the cover: dots → photo → lyrics → dots.
+                        val cycle = {
+                            Graph.settings.update { s ->
+                                when {
+                                    s.lyricsView -> s.copy(lyricsView = false, dotArtwork = true)
+                                    s.dotArtwork -> s.copy(dotArtwork = false)
+                                    else -> s.copy(lyricsView = true)
+                                }
+                            }
+                        }
+                        Crossfade(targetState = mode == ArtMode.LYRICS, label = "lyrics") { lyrics ->
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                if (lyrics) {
+                                    Box(
+                                        Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(28.dp))
+                                            .background(P.surface)
+                                            .border(1.dp, P.outline, RoundedCornerShape(28.dp)),
+                                    ) {
+                                        LyricsView(track, onTap = cycle, modifier = Modifier.fillMaxSize())
+                                        ModeTabs(ArtMode.LYRICS, Modifier.align(Alignment.BottomEnd).padding(14.dp))
+                                    }
+                                } else {
+                                    CoverArt(
+                                        url = Graph.library.artworkFor(track),
+                                        mode = mode,
+                                        playing = state.isPlaying,
+                                        modifier = Modifier.size(side),
+                                        onToggle = cycle,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -163,8 +196,10 @@ fun NowPlayingScreen(onClose: () -> Unit) {
     }
 }
 
+private enum class ArtMode { DOTS, PHOTO, LYRICS }
+
 @Composable
-private fun CoverArt(url: String?, dots: Boolean, playing: Boolean, modifier: Modifier, onToggle: () -> Unit) {
+private fun CoverArt(url: String?, mode: ArtMode, playing: Boolean, modifier: Modifier, onToggle: () -> Unit) {
     Box(
         modifier
             .clip(RoundedCornerShape(28.dp))
@@ -172,7 +207,7 @@ private fun CoverArt(url: String?, dots: Boolean, playing: Boolean, modifier: Mo
             .border(1.dp, P.outline, RoundedCornerShape(28.dp))
             .clickable(onClick = onToggle),
     ) {
-        Crossfade(targetState = dots, label = "art") { showDots ->
+        Crossfade(targetState = mode == ArtMode.DOTS, label = "art") { showDots ->
             if (showDots || url == null) {
                 HalftoneArtwork(url, Modifier.fillMaxSize(), breathing = playing, background = P.surface)
             } else {
@@ -184,12 +219,17 @@ private fun CoverArt(url: String?, dots: Boolean, playing: Boolean, modifier: Mo
                 )
             }
         }
-        Text(
-            if (dots) "DOTS" else "PHOTO",
-            style = Type.label,
-            color = P.textFaint,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(14.dp),
-        )
+        ModeTabs(mode, Modifier.align(Alignment.BottomEnd).padding(14.dp))
+    }
+}
+
+/** "DOTS  PHOTO  LYRICS", the current one lit: shows what a tap on the cover cycles through. */
+@Composable
+private fun ModeTabs(current: ArtMode, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        ArtMode.entries.forEach { m ->
+            Text(m.name, style = Type.label, color = if (m == current) P.text else P.textFaint)
+        }
     }
 }
 
