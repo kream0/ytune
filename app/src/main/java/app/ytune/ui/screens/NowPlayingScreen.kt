@@ -2,6 +2,17 @@ package app.ytune.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
+import sh.calvin.reorderable.rememberReorderableLazyListState
+import sh.calvin.reorderable.ReorderableItem
+import app.ytune.ui.components.DragHandle
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -385,16 +396,72 @@ private fun SaveStatusChip(track: Track) {
     }
 }
 
+/** A queue row; the key stays the same while the song moves (nth copy of the same song). */
+private data class QueueEntry(val key: String, val track: Track, val suggested: Boolean)
+
+private fun entriesOf(state: PlayerUiState): List<QueueEntry> {
+    val seen = HashMap<String, Int>()
+    return state.queue.mapIndexed { i, t ->
+        val n = (seen[t.id] ?: 0) + 1
+        seen[t.id] = n
+        QueueEntry("${t.id}#$n", t, i in state.suggested)
+    }
+}
+
 @Composable
 private fun QueueList(state: PlayerUiState) {
     val sheets = LocalSheets.current
     val dl = LocalDl.current
+    val haptic = LocalHapticFeedback.current
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = (state.currentIndex - 2).coerceAtLeast(0))
     val settings by Graph.settings.state.collectAsStateWithLifecycle()
     // Keyed by position: the same song can be in the queue twice. Any queue change resets it.
     val selection = rememberSelection<Int>(state.queue)
-    val firstSuggested = state.suggested.filter { it > state.currentIndex }.minOrNull()
     val chosen = { state.queue.filterIndexed { i, _ -> i in selection } }
+
+    // The player's order, and the order on screen (which moves live while dragging).
+    val stateEntries = remember(state.queue, state.suggested) { entriesOf(state) }
+    val indexOf = remember(stateEntries) { stateEntries.withIndex().associate { it.value.key to it.index } }
+    // The drag library keeps the first callbacks it's given, so they read the queue through this.
+    val latest = rememberUpdatedState(stateEntries)
+    val entries = remember { mutableStateListOf<QueueEntry>().apply { addAll(stateEntries) } }
+    var dragging by remember { mutableStateOf<String?>(null) }
+    var dragStart by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(stateEntries) {
+        if (dragging == null && entries.toList() != stateEntries) {
+            entries.clear()
+            entries.addAll(stateEntries)
+        }
+    }
+    val currentKey = stateEntries.getOrNull(state.currentIndex)?.key
+    val firstSuggestedKey = entries
+        .drop(entries.indexOfFirst { it.key == currentKey } + 1)
+        .firstOrNull { it.suggested }?.key
+
+    val reorder = rememberReorderableLazyListState(listState) { from, to ->
+        val a = entries.indexOfFirst { it.key == from.key }
+        val b = entries.indexOfFirst { it.key == to.key }
+        if (a >= 0 && b >= 0 && a != b) {
+            entries.add(b, entries.removeAt(a))
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    /** Drop: one move in the player; if the queue changed underneath meanwhile, just re-sync. */
+    fun commitDrag() {
+        val key = dragging ?: return
+        dragging = null
+        val from = dragStart.indexOf(key)
+        val to = entries.indexOfFirst { it.key == key }
+        val now = latest.value
+        if (now.map { it.key } == dragStart && from >= 0 && to >= 0) {
+            if (from != to) Graph.player.move(from, to)
+        } else {
+            entries.clear()
+            entries.addAll(now)
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -436,41 +503,70 @@ private fun QueueList(state: PlayerUiState) {
                     NothingSwitch(settings.autoplay, { on -> Graph.settings.update { it.copy(autoplay = on) } })
                 }
             }
-            itemsIndexed(state.queue, key = { i, t -> "$i:${t.id}" }) { index, track ->
-                Column {
-                    if (index == firstSuggested) {
+            entries.forEach { entry ->
+                if (entry.key == firstSuggestedKey) {
+                    item(key = "suggested-header") {
                         SectionLabel(
                             "Suggested · autoplay",
-                            Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp),
+                            Modifier.animateItem().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp),
                         )
                     }
-                    TrackRow(
-                        track = track,
-                        badge = dl.badge(track.id),
-                        artwork = Graph.library.artworkFor(track),
-                        isCurrent = index == state.currentIndex,
-                        isPlaying = state.isPlaying,
-                        selected = selection.rowState(index),
-                        onLongClick = { selection.toggle(index) },
-                        onClick = { if (selection.active) selection.toggle(index) else Graph.player.jumpTo(index) },
-                        onMore = {
-                            sheets(
-                                Actions.trackSheet(
-                                    track,
-                                    extra = buildList {
-                                        if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.player.move(index, index - 1) })
-                                        if (index < state.queue.size - 1) {
-                                            add(SheetAction("Move down", Ic.ChevronDown) { Graph.player.move(index, index + 1) })
-                                        }
-                                        add(SheetAction("Remove from queue", Ic.Close, destructive = true) { Graph.player.removeAt(index) })
-                                    },
-                                )
+                }
+                item(key = entry.key) {
+                    ReorderableItem(reorder, key = entry.key) { isDragging ->
+                        val index = indexOf[entry.key] ?: return@ReorderableItem
+                        val track = entry.track
+                        val lift by animateFloatAsState(if (isDragging) 1f else 0f, label = "lift")
+                        val handle = Modifier.draggableHandle(
+                            enabled = !selection.active,
+                            onDragStarted = {
+                                dragStart = latest.value.map { it.key }
+                                dragging = entry.key
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDragStopped = { commitDrag() },
+                        )
+                        Box(
+                            Modifier
+                                .graphicsLayer {
+                                    scaleX = 1f + 0.03f * lift
+                                    scaleY = 1f + 0.03f * lift
+                                    shadowElevation = 14.dp.toPx() * lift
+                                    shape = RoundedCornerShape(18.dp)
+                                    clip = lift > 0f
+                                }
+                                .background(lerp(P.background, P.surfaceHigh, lift)),
+                        ) {
+                            TrackRow(
+                                track = track,
+                                badge = dl.badge(track.id),
+                                artwork = Graph.library.artworkFor(track),
+                                isCurrent = entry.key == currentKey,
+                                isPlaying = state.isPlaying,
+                                selected = selection.rowState(index),
+                                leading = { DragHandle(handle, active = isDragging, enabled = !selection.active) },
+                                onLongClick = { selection.toggle(index) },
+                                onClick = { if (selection.active) selection.toggle(index) else Graph.player.jumpTo(index) },
+                                onMore = {
+                                    sheets(
+                                        Actions.trackSheet(
+                                            track,
+                                            extra = buildList {
+                                                if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.player.move(index, index - 1) })
+                                                if (index < state.queue.size - 1) {
+                                                    add(SheetAction("Move down", Ic.ChevronDown) { Graph.player.move(index, index + 1) })
+                                                }
+                                                add(SheetAction("Remove from queue", Ic.Close, destructive = true) { Graph.player.removeAt(index) })
+                                            },
+                                        )
+                                    )
+                                },
+                                trailing = {
+                                    IconBtn(Ic.Close, { Graph.player.removeAt(index) }, tint = P.textFaint, size = 36.dp, iconSize = 18.dp)
+                                },
                             )
-                        },
-                        trailing = {
-                            IconBtn(Ic.Close, { Graph.player.removeAt(index) }, tint = P.textFaint, size = 36.dp, iconSize = 18.dp)
-                        },
-                    )
+                        }
+                    }
                 }
             }
         }

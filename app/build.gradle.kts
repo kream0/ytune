@@ -138,6 +138,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
+    implementation(libs.reorderable) // drag-to-reorder in the queue
 
     implementation(libs.newpipe.extractor)
     implementation(files(glyphSdk))

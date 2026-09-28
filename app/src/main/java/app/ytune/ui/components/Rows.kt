@@ -1,6 +1,7 @@
 package app.ytune.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -23,9 +24,12 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -151,15 +155,18 @@ fun TrackRow(
     /** Null outside selection mode; otherwise whether this row is selected. */
     selected: Boolean? = null,
     onLongClick: (() -> Unit)? = onMore,
+    /** Shown before the artwork, e.g. the queue's [DragHandle]. */
+    leading: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier
             .fillMaxWidth()
             .background(if (selected == true) P.surfaceHigh else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(start = 16.dp, end = 6.dp, top = 7.dp, bottom = 7.dp),
+            .padding(start = if (leading != null) 0.dp else 16.dp, end = 6.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        leading?.invoke()
         Box(Modifier.size(52.dp)) {
             Artwork(artwork, Modifier.fillMaxSize())
             if (isCurrent) {
@@ -206,6 +213,34 @@ fun TrackRow(
             trailing?.invoke()
             if (onMore != null) {
                 IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+            }
+        }
+    }
+}
+
+/**
+ * Grip for dragging a row: 2 × 3 dots, like the rest of the dot UI. [handle] carries the drag
+ * gesture; the dots light up while the row is being dragged.
+ */
+@Composable
+fun DragHandle(handle: Modifier, active: Boolean, enabled: Boolean = true) {
+    val color = when {
+        active -> P.accent
+        enabled -> P.textDim
+        else -> P.textFaint.copy(alpha = 0.4f)
+    }
+    Box(
+        handle.size(width = 40.dp, height = 52.dp).semantics { contentDescription = "Drag to reorder" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(width = 9.dp, height = 15.dp)) {
+            val r = 1.7.dp.toPx()
+            for (col in 0..1) for (row in 0..2) {
+                drawCircle(
+                    color,
+                    radius = r,
+                    center = Offset(r + col * (size.width - 2 * r), r + row * (size.height - 2 * r) / 2),
+                )
             }
         }
     }
