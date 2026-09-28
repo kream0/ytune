@@ -283,7 +283,6 @@ private fun PlaylistContent(
                     IconBtn(Ic.PlaylistAdd, {
                         if (enabled) {
                             Graph.player.enqueue(ui.tracks)
-                            Graph.toast("Added ${ui.tracks.size} tracks to the queue")
                         }
                     }, bordered = true, size = 44.dp, contentDescription = "Add all to queue")
                     IconBtn(Ic.Download, { if (enabled) onDownloadAll() }, bordered = true, size = 44.dp, contentDescription = "Download all")

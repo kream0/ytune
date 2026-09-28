@@ -35,6 +35,7 @@ import app.ytune.data.Track
 import app.ytune.glyph.GlyphNowPlaying
 import app.ytune.glyph.GlyphSupport
 import app.ytune.glyph.NowPlayingInfo
+import app.ytune.lyrics.SameSong
 import app.ytune.yt.YouTube
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -331,8 +332,16 @@ class PlaybackService : MediaSessionService() {
      * several "Add next in queue" keep their order. With shuffle on, the player would otherwise
      * give them a random spot, so the shuffle order is rebuilt with them next.
      */
-    private fun queueNext(tracks: List<Track>) {
+    private fun queueNext(requested: List<Track>) {
+        // One copy per song: "Add next" on a song that's already queued moves it instead.
+        val currentId = player.currentMediaItem?.mediaId
+        val tracks = requested.distinctBy { it.id }.filter { it.id != currentId }
         if (tracks.isEmpty()) return
+        val ids = tracks.mapTo(HashSet()) { it.id }
+        val current = player.currentMediaItemIndex
+        (player.mediaItemCount - 1 downTo 0)
+            .filter { it != current && player.getMediaItemAt(it).mediaId in ids }
+            .forEach { player.removeMediaItem(it) }
         val items = tracks.map { MediaItems.build(it, Graph.library.artworkFor(it), upNext = true) }
         if (player.mediaItemCount == 0) {
             player.setMediaItems(items)
@@ -387,8 +396,23 @@ class PlaybackService : MediaSessionService() {
             }
             // The user may have moved on or switched autoplay off meanwhile.
             if (!Graph.settings.current.autoplay || player.mediaItemCount == 0) return@launch
-            val inQueue = (0 until player.mediaItemCount).mapTo(HashSet()) { player.getMediaItemAt(it).mediaId }
-            val picks = found.filter { it.id !in inQueue }.take(SUGGESTIONS_PER_BATCH)
+            // Nothing already queued: neither the same video nor another upload of the same song
+            // (official video vs. Topic audio vs. lyrics video), and no repeats within the batch.
+            val inQueue = HashSet<String>()
+            val sameSong = SameSong()
+            for (i in 0 until player.mediaItemCount) {
+                val t = MediaItems.toTrack(player.getMediaItemAt(i))
+                inQueue += t.id
+                sameSong.add(t.title, t.artist)
+            }
+            val picks = mutableListOf<Track>()
+            for (t in found) {
+                if (t.id in inQueue || (t.title to t.artist) in sameSong) continue
+                inQueue += t.id
+                sameSong.add(t.title, t.artist)
+                picks += t
+                if (picks.size == SUGGESTIONS_PER_BATCH) break
+            }
             if (picks.isEmpty()) return@launch
             val ended = player.playbackState == Player.STATE_ENDED
             val first = player.mediaItemCount

@@ -162,7 +162,6 @@ fun LibraryScreen(app: AppViewModel) {
                                     onAddAll = {
                                         val tracks = Graph.library.tracksOf(saved)
                                         Graph.player.enqueue(tracks)
-                                        Graph.toast("Added ${tracks.size} tracks to the queue")
                                     },
                                     onMore = { sheets(Actions.playlistSheet(saved.ref) { app.openPlaylist(saved.ref) }) },
                                 )

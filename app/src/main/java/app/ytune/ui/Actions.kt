@@ -72,7 +72,6 @@ object Actions {
 
     fun queuePlaylist(ref: PlaylistRef) = withPlaylist(ref) { _, tracks ->
         Graph.player.enqueue(tracks)
-        Graph.toast("Added ${tracks.size} tracks to the queue")
     }
 
     fun downloadPlaylist(ref: PlaylistRef) = withPlaylist(ref) { header, tracks ->
@@ -90,12 +89,15 @@ object Actions {
         val actions = buildList {
             add(SheetAction("Play now", Ic.PlaylistPlay) { Graph.player.playNow(track) })
             add(SheetAction("Add next in queue", Ic.PlayNext) {
-                Graph.player.playNext(listOf(track))
-                Graph.toast("Plays after the current song")
+                if (Graph.player.state.value.current?.id == track.id) {
+                    Graph.toast("That's the song playing now")
+                } else {
+                    Graph.player.playNext(listOf(track))
+                    Graph.toast("Plays after the current song")
+                }
             })
             add(SheetAction("Add to queue", Ic.Queue) {
                 Graph.player.enqueue(listOf(track))
-                Graph.toast("Added to queue")
             })
             add(SheetAction("Add to playlist", Ic.PlaylistAdd, next = { addToPlaylistSheet(listOf(track)) }))
             if (downloaded) {
@@ -261,7 +263,6 @@ object Actions {
                 })
                 add(SheetAction("Add to queue", Ic.Queue) {
                     Graph.player.enqueue(tracks)
-                    Graph.toast("Added ${tracksLabel(tracks.size)} to the queue")
                     onDone()
                 })
                 add(SheetAction("Add to playlist", Ic.PlaylistAdd, next = { addToPlaylistSheet(tracks) { onDone() } }))

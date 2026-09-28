@@ -143,10 +143,13 @@ class PlayerConnection(private val context: Context) {
 
     // ------------------------------------------------------------------ commands
 
-    fun playAll(tracks: List<Track>, startIndex: Int = 0, shuffle: Boolean = false) {
-        if (tracks.isEmpty()) return
+    fun playAll(list: List<Track>, startIndex: Int = 0, shuffle: Boolean = false) {
+        if (list.isEmpty()) return
+        // A playlist can hold the same video twice; the queue gets it once.
+        val startId = list[startIndex.coerceIn(0, list.size - 1)].id
+        val tracks = list.distinctBy { it.id }
         withController { c ->
-            val start = if (shuffle) Random.nextInt(tracks.size) else startIndex.coerceIn(0, tracks.size - 1)
+            val start = if (shuffle) Random.nextInt(tracks.size) else tracks.indexOfFirst { it.id == startId }.coerceAtLeast(0)
             c.shuffleModeEnabled = shuffle
             c.setMediaItems(tracks.map(::item), start, 0L)
             c.prepare()
@@ -183,15 +186,45 @@ class PlayerConnection(private val context: Context) {
         )
     }
 
-    /** Adds to the end of what you queued: before autoplay's upcoming suggestions, if any. */
+    /**
+     * Adds to the end of what you queued: before autoplay's upcoming suggestions, if any. Each
+     * song is in the queue once: ones still to come (or playing) are left where they are, and
+     * ones that already played move down to play again. Says what happened.
+     */
     fun enqueue(tracks: List<Track>) = withController { c ->
-        if (tracks.isEmpty()) return@withController
+        val unique = tracks.distinctBy { it.id }
+        if (unique.isEmpty()) return@withController
         val wasEmpty = c.mediaItemCount == 0
-        val beforeSuggestions = (c.currentMediaItemIndex + 1 until c.mediaItemCount)
-            .firstOrNull { MediaItems.isSuggested(c.getMediaItemAt(it)) }
-        if (beforeSuggestions != null) c.addMediaItems(beforeSuggestions, tracks.map(::item))
-        else c.addMediaItems(tracks.map(::item))
+        fun insertPoint() = (c.currentMediaItemIndex + 1 until c.mediaItemCount)
+            .firstOrNull { MediaItems.isSuggested(c.getMediaItemAt(it)) } ?: c.mediaItemCount
+        fun indexOf(id: String) = (0 until c.mediaItemCount).firstOrNull { c.getMediaItemAt(it).mediaId == id }
+
+        val fresh = mutableListOf<Track>()
+        var skipped = 0
+        var replayed = 0
+        for (t in unique) {
+            val at = indexOf(t.id)
+            when {
+                at == null -> fresh += t
+                at >= c.currentMediaItemIndex -> skipped++
+                else -> {
+                    c.moveMediaItem(at, insertPoint() - 1)
+                    replayed++
+                }
+            }
+        }
+        if (fresh.isNotEmpty()) c.addMediaItems(insertPoint(), fresh.map(::item))
         if (wasEmpty) c.prepare()
+
+        val queued = fresh.size + replayed
+        Graph.toast(
+            when {
+                queued == 0 -> if (unique.size == 1) "Already in the queue" else "All already in the queue"
+                skipped > 0 -> "Added $queued · $skipped already in the queue"
+                unique.size == 1 -> "Added to queue"
+                else -> "Added $queued tracks to the queue"
+            }
+        )
     }
 
     fun togglePlay() = withController { c ->

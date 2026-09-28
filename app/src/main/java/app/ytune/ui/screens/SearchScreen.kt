@@ -163,7 +163,6 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
                                 PillButton("Play all", { Graph.player.playAll(songs) }, icon = Ic.PlaylistPlay, style = PillStyle.Filled)
                                 PillButton("Queue all", {
                                     Graph.player.enqueue(songs)
-                                    Graph.toast("Added ${songs.size} tracks to the queue")
                                 }, icon = Ic.PlaylistAdd)
                             }
                         }
