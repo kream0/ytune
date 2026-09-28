@@ -4,6 +4,7 @@ package app.ytune.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Bundle
 import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -19,13 +20,18 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ShuffleOrder
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import app.ytune.Graph
 import app.ytune.MainActivity
 import app.ytune.R
+import app.ytune.data.AppJson
 import app.ytune.data.DownloadStrategy
+import app.ytune.data.Track
 import app.ytune.glyph.GlyphNowPlaying
 import app.ytune.glyph.GlyphSupport
 import app.ytune.glyph.NowPlayingInfo
@@ -43,6 +49,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.ListSerializer
 
 /**
  * Hosts the ExoPlayer + MediaSession. Media3 wires the session to the system, which is what
@@ -317,6 +324,45 @@ class PlaybackService : MediaSessionService() {
     private fun nextItemId(): String? =
         player.nextMediaItemIndex.takeIf { it != C.INDEX_UNSET }?.let { player.getMediaItemAt(it).mediaId }
 
+    // ------------------------------------------------------------------ add next in queue
+
+    /**
+     * Puts [tracks] right after the current song, and after songs already queued this way, so
+     * several "Add next in queue" keep their order. With shuffle on, the player would otherwise
+     * give them a random spot, so the shuffle order is rebuilt with them next.
+     */
+    private fun queueNext(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        val items = tracks.map { MediaItems.build(it, Graph.library.artworkFor(it), upNext = true) }
+        if (player.mediaItemCount == 0) {
+            player.setMediaItems(items)
+            player.prepare()
+            return
+        }
+        val shuffle = player.shuffleModeEnabled
+        val timeline = player.currentTimeline
+        var anchor = player.currentMediaItemIndex
+        while (true) {
+            val next = timeline.getNextWindowIndex(anchor, Player.REPEAT_MODE_OFF, shuffle)
+            if (next == C.INDEX_UNSET || !MediaItems.isUpNext(player.getMediaItemAt(next))) break
+            anchor = next
+        }
+        val at = anchor + 1
+        player.addMediaItems(at, items)
+        if (shuffle) {
+            val added = (at until at + items.size).toList()
+            val order = mutableListOf<Int>()
+            val t = player.currentTimeline
+            var i = t.getFirstWindowIndex(true)
+            while (i != C.INDEX_UNSET) {
+                if (i !in added) order += i
+                i = t.getNextWindowIndex(i, Player.REPEAT_MODE_OFF, true)
+            }
+            order.addAll(order.indexOf(anchor) + 1, added) // anchor < at, so its index didn't move
+            player.setShuffleOrder(ShuffleOrder.DefaultShuffleOrder(order.toIntArray(), System.nanoTime()))
+        }
+    }
+
     // ------------------------------------------------------------------ autoplay
 
     /**
@@ -450,6 +496,39 @@ class PlaybackService : MediaSessionService() {
     // ------------------------------------------------------------------ session callback
 
     private inner class SessionCallback : MediaSession.Callback {
+        /** Also lets controllers (our UI) send [MediaItems.CMD_PLAY_NEXT]. */
+        override fun onConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): MediaSession.ConnectionResult {
+            val base = super.onConnect(session, controller)
+            if (!base.isAccepted) return base
+            return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                .setAvailableSessionCommands(
+                    base.availableSessionCommands.buildUpon()
+                        .add(SessionCommand(MediaItems.CMD_PLAY_NEXT, Bundle.EMPTY))
+                        .build()
+                )
+                .setAvailablePlayerCommands(base.availablePlayerCommands)
+                .build()
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction != MediaItems.CMD_PLAY_NEXT) {
+                return super.onCustomCommand(session, controller, customCommand, args)
+            }
+            val tracks = runCatching {
+                AppJson.decodeFromString(ListSerializer(Track.serializer()), args.getString(MediaItems.ARG_TRACKS).orEmpty())
+            }.getOrDefault(emptyList())
+            queueNext(tracks)
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+        }
+
         override fun onAddMediaItems(
             mediaSession: MediaSession,
             controller: MediaSession.ControllerInfo,

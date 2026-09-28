@@ -16,6 +16,11 @@ object MediaItems {
     private const val EXTRA_DURATION = "ytune.duration"
     private const val EXTRA_THUMB = "ytune.thumb"
     private const val EXTRA_SUGGESTED = "ytune.suggested"
+    private const val EXTRA_UP_NEXT = "ytune.upnext"
+
+    /** Session command: queue tracks right after the current one (args: [ARG_TRACKS] as JSON). */
+    const val CMD_PLAY_NEXT = "app.ytune.PLAY_NEXT"
+    const val ARG_TRACKS = "tracks"
 
     private const val PARAM_DISK = "disk"
 
@@ -30,12 +35,16 @@ object MediaItems {
     fun isDiskReload(item: MediaItem): Boolean =
         item.localConfiguration?.uri?.getQueryParameter(PARAM_DISK) != null
 
-    /** [suggested]: added by autoplay rather than by you (see [isSuggested]). */
-    fun build(track: Track, artwork: String? = track.thumbnail, suggested: Boolean = false): MediaItem {
+    /**
+     * [suggested]: added by autoplay rather than by you (see [isSuggested]).
+     * [upNext]: queued with "Add next in queue" (see [isUpNext]).
+     */
+    fun build(track: Track, artwork: String? = track.thumbnail, suggested: Boolean = false, upNext: Boolean = false): MediaItem {
         val extras = Bundle().apply {
             putLong(EXTRA_DURATION, track.durationSec)
             putString(EXTRA_THUMB, track.thumbnail)
             if (suggested) putBoolean(EXTRA_SUGGESTED, true)
+            if (upNext) putBoolean(EXTRA_UP_NEXT, true)
         }
         val metadata = MediaMetadata.Builder()
             .setTitle(track.title)
@@ -54,6 +63,8 @@ object MediaItems {
     fun withUri(item: MediaItem): MediaItem = item.buildUpon().setUri(uriFor(item.mediaId)).build()
 
     fun isSuggested(item: MediaItem): Boolean = item.mediaMetadata.extras?.getBoolean(EXTRA_SUGGESTED) == true
+
+    fun isUpNext(item: MediaItem): Boolean = item.mediaMetadata.extras?.getBoolean(EXTRA_UP_NEXT) == true
 
     fun toTrack(item: MediaItem): Track {
         val m = item.mediaMetadata

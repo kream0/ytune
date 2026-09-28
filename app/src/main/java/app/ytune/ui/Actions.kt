@@ -89,9 +89,9 @@ object Actions {
         val downloaded = Graph.library.isDownloaded(track.id)
         val actions = buildList {
             add(SheetAction("Play now", Ic.PlaylistPlay) { Graph.player.playNow(track) })
-            add(SheetAction("Play next", Ic.PlayNext) {
+            add(SheetAction("Add next in queue", Ic.PlayNext) {
                 Graph.player.playNext(listOf(track))
-                Graph.toast("Playing next")
+                Graph.toast("Plays after the current song")
             })
             add(SheetAction("Add to queue", Ic.Queue) {
                 Graph.player.enqueue(listOf(track))
@@ -254,9 +254,9 @@ object Actions {
                     Graph.player.playAll(tracks)
                     onDone()
                 })
-                add(SheetAction("Play next", Ic.PlayNext) {
+                add(SheetAction("Add next in queue", Ic.PlayNext) {
                     Graph.player.playNext(tracks)
-                    Graph.toast("Playing next: ${tracksLabel(tracks.size)}")
+                    Graph.toast("${tracksLabel(tracks.size).replaceFirstChar { it.uppercase() }} after the current song")
                     onDone()
                 })
                 add(SheetAction("Add to queue", Ic.Queue) {

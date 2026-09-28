@@ -2,12 +2,15 @@ package app.ytune.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import androidx.core.content.ContextCompat
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import app.ytune.Graph
+import app.ytune.data.AppJson
 import app.ytune.data.Track
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Job
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
 import kotlin.random.Random
 
 data class PlayerUiState(
@@ -166,12 +170,17 @@ class PlayerConnection(private val context: Context) {
         c.play()
     }
 
+    /**
+     * Queues [tracks] right after the current song, in order, after any songs already queued
+     * this way. The service does it, since only it can also fix the shuffle order.
+     */
     fun playNext(tracks: List<Track>) = withController { c ->
         if (tracks.isEmpty()) return@withController
-        val wasEmpty = c.mediaItemCount == 0
-        val at = if (wasEmpty) 0 else c.currentMediaItemIndex + 1
-        c.addMediaItems(at, tracks.map(::item))
-        if (wasEmpty) c.prepare()
+        val json = AppJson.encodeToString(ListSerializer(Track.serializer()), tracks)
+        c.sendCustomCommand(
+            SessionCommand(MediaItems.CMD_PLAY_NEXT, Bundle.EMPTY),
+            Bundle().apply { putString(MediaItems.ARG_TRACKS, json) },
+        )
     }
 
     /** Adds to the end of what you queued: before autoplay's upcoming suggestions, if any. */
