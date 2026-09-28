@@ -34,6 +34,7 @@ import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 
 enum class DlStatus { QUEUED, WAITING_NETWORK, RUNNING, DONE, FAILED, CANCELED }
 
@@ -54,6 +55,24 @@ data class DlTask(
 class HttpStatusException(val code: Int) : IOException("HTTP $code")
 
 /**
+ * A download in progress, readable while it grows: the player plays a song that's still
+ * downloading straight from this file instead of fetching it a second time. The file is
+ * written front to back, so everything below [written] is final.
+ */
+class GrowingFile(file: File, total: Long, written: Long) {
+    @Volatile var file: File = file
+        internal set
+    @Volatile var total: Long = total
+        internal set
+    @Volatile var written: Long = written
+        internal set
+    @Volatile var done: Boolean = false
+        internal set
+    @Volatile var failed: Boolean = false
+        internal set
+}
+
+/**
  * Downloads audio with plain ranged HTTP requests (2 MB chunks, like yt-dlp's chunked mode,
  * which keeps YouTube from throttling). Partial files survive app restarts and resume.
  * Task bookkeeping happens on the main thread; transfers run on [Dispatchers.IO].
@@ -69,6 +88,7 @@ class DownloadManager(
     val tasks: StateFlow<Map<String, DlTask>> = _tasks.asStateFlow()
 
     private val jobs = HashMap<String, Job>()
+    private val growing = ConcurrentHashMap<String, GrowingFile>()
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
 
     init {
@@ -120,6 +140,25 @@ class DownloadManager(
             pump()
         }
         return added
+    }
+
+    /** The song's download while it's being written (see [GrowingFile]). Any thread. */
+    fun growing(id: String): GrowingFile? = growing[id]
+
+    /** There's an unfinished download of this song (queued, running or waiting for Wi-Fi). Any thread. */
+    fun hasTask(id: String): Boolean = _tasks.value[id]?.isActive == true
+
+    /** A download of this song is queued or running (not waiting for Wi-Fi). Any thread. */
+    fun isFetching(id: String): Boolean =
+        _tasks.value[id]?.status.let { it == DlStatus.QUEUED || it == DlStatus.RUNNING }
+
+    /** The player is waiting for this song: start its download now, ahead of the queue. Any thread. */
+    fun prioritize(id: String) {
+        scope.launch {
+            val task = _tasks.value[id]?.takeIf { it.status == DlStatus.QUEUED } ?: return@launch
+            val (online, unmetered) = networkOk()
+            if (online && (!settings.current.wifiOnly || unmetered)) start(task.track)
+        }
     }
 
     fun cancel(id: String) {
@@ -197,9 +236,11 @@ class DownloadManager(
             if (jobs[id] === self) jobs.remove(id)
             result.onSuccess { audio ->
                 library.addDownloaded(track, audio)
+                growing.remove(id) // from now on the player opens the finished file
                 mutate(id) { it.copy(status = DlStatus.DONE, bytes = audio.sizeBytes, total = audio.sizeBytes) }
             }
             result.onFailure { e ->
+                growing.remove(id)?.failed = true
                 if (e !is CancellationException) {
                     Log.w(TAG, "Download failed for $id", e)
                     mutate(id) { it.copy(status = DlStatus.FAILED, error = e.message ?: e.javaClass.simpleName) }
@@ -259,7 +300,29 @@ class DownloadManager(
             offset = 0
         }
         report(id, offset, total, force = true)
+        val g = GrowingFile(part, total, offset)
+        growing[id] = g
+        try {
+            return transferInto(id, stream, part, target, g, offset, total, ctx)
+        } catch (e: Throwable) {
+            g.failed = true
+            growing.remove(id, g)
+            throw e
+        }
+    }
 
+    private fun transferInto(
+        id: String,
+        stream: ResolvedStream,
+        part: File,
+        target: File,
+        g: GrowingFile,
+        startOffset: Long,
+        knownTotal: Long,
+        ctx: kotlin.coroutines.CoroutineContext,
+    ): File {
+        var offset = startOffset
+        var total = knownTotal
         val buffer = ByteArray(64 * 1024)
         var lastReport = 0L
         FileOutputStream(part, true).use { out ->
@@ -281,11 +344,13 @@ class DownloadManager(
                             // Server ignored the Range header: start over with the full body.
                             out.channel.truncate(0)
                             offset = 0
+                            g.written = 0
                         }
                         if (total <= 0) {
                             total = response.header("Content-Range")?.substringAfter('/')?.toLongOrNull()
                                 ?: response.body?.contentLength()?.takeIf { response.code == 200 && it > 0 }
                                 ?: -1L
+                            g.total = total
                         }
                         val body = response.body ?: throw IOException("Empty response body")
                         var read = 0L
@@ -296,6 +361,7 @@ class DownloadManager(
                                 if (n < 0) break
                                 out.write(buffer, 0, n)
                                 offset += n
+                                g.written = offset
                                 read += n
                                 val now = System.currentTimeMillis()
                                 if (now - lastReport > 300) {
@@ -316,6 +382,10 @@ class DownloadManager(
             part.copyTo(target, overwrite = true)
             part.delete()
         }
+        g.file = target
+        g.total = target.length()
+        g.written = target.length()
+        g.done = true
         report(id, target.length(), target.length(), force = true)
         return target
     }

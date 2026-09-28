@@ -4,10 +4,12 @@ package app.ytune.playback
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.ResolvingDataSource
@@ -16,9 +18,13 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import app.ytune.data.Library
 import app.ytune.data.Settings
+import app.ytune.download.DownloadManager
+import app.ytune.download.GrowingFile
 import app.ytune.yt.YouTube
 import java.io.File
 import java.io.IOException
+import java.io.InterruptedIOException
+import java.io.RandomAccessFile
 import java.util.concurrent.ConcurrentHashMap
 
 /** Process-wide stream cache (SimpleCache must be a singleton per folder). */
@@ -52,7 +58,11 @@ object StreamCache {
 class TrackResolver(
     private val library: Library,
     private val settings: Settings,
+    private val downloads: DownloadManager,
 ) : ResolvingDataSource.Resolver {
+
+    private fun downloadFor(id: String, position: Long): GrowingFile? =
+        growingDownload(downloads, settings, id, position)
 
     override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
         val uri = dataSpec.uri
@@ -63,6 +73,12 @@ class TrackResolver(
             OpenedFrom.disk(id)
             return dataSpec.withUri(Uri.fromFile(File(local.path)))
         }
+        // Being downloaded right now: play from the download as it grows, rather than
+        // fetching the same song a second time over the network.
+        if (downloadFor(id, dataSpec.position) != null) {
+            OpenedFrom.disk(id)
+            return dataSpec.withUri(Uri.parse("${GrowingFileDataSource.SCHEME}://track/$id"))
+        }
 
         val stream = YouTube.resolve(id, settings.current.quality)
         OpenedFrom.network(id)
@@ -71,6 +87,133 @@ class TrackResolver(
             .setKey("yt:$id:${stream.itag}")
             .setHttpRequestHeaders(dataSpec.httpRequestHeaders + mapOf("User-Agent" to stream.userAgent))
             .build()
+    }
+}
+
+/**
+ * The song's download if it's (about to be) running and will reach [position] soon. A queued
+ * download is started right away and given a few seconds to begin; in "stream + download" mode
+ * the song's auto-download (queued a moment after it starts playing) is waited for too.
+ * Otherwise null: stream it. Runs on the player's loading thread.
+ */
+private fun growingDownload(downloads: DownloadManager, settings: Settings, id: String, position: Long): GrowingFile? {
+    fun near(g: GrowingFile) = !g.failed && (g.done || position <= g.written + NEAR_BYTES)
+
+    val start = SystemClock.elapsedRealtime()
+    fun elapsed() = SystemClock.elapsedRealtime() - start
+    if (settings.current.downloadWhileStreaming) {
+        while (!downloads.hasTask(id) && elapsed() < TASK_WAIT_MS) sleepOrThrow()
+    }
+    if (!downloads.isFetching(id)) return null // none, or waiting for Wi-Fi
+    downloads.prioritize(id)
+    while (elapsed() < START_WAIT_MS) {
+        val g = downloads.growing(id)
+        if (g != null) {
+            if (!near(g)) return null // e.g. a seek far ahead of the download
+            if (g.done || g.written >= position + FIRST_BYTES) return g
+        } else if (!downloads.isFetching(id)) {
+            return null
+        }
+        sleepOrThrow()
+    }
+    return null
+}
+
+private fun sleepOrThrow() {
+    try {
+        Thread.sleep(40)
+    } catch (e: InterruptedException) {
+        throw InterruptedIOException("Interrupted")
+    }
+}
+
+/** How far ahead of the download a read may start (else, e.g. after a seek, stream instead). */
+private const val NEAR_BYTES = 512L * 1024
+/** Bytes to wait for before playing from a download (a few seconds of audio). */
+private const val FIRST_BYTES = 96L * 1024
+private const val START_WAIT_MS = 6_000L
+private const val TASK_WAIT_MS = 1_200L
+
+/**
+ * Reads a song from its download while it's still being written ([GrowingFile]), waiting for
+ * bytes that haven't arrived yet like a slow network would.
+ */
+class GrowingFileDataSource(private val lookup: (String) -> GrowingFile?) : BaseDataSource(false) {
+    private var file: RandomAccessFile? = null
+    private var growing: GrowingFile? = null
+    private var uri: Uri? = null
+    private var position = 0L
+    private var bytesRemaining = C.LENGTH_UNSET.toLong()
+    private var opened = false
+
+    override fun open(dataSpec: DataSpec): Long {
+        uri = dataSpec.uri
+        val id = dataSpec.uri.lastPathSegment ?: throw IOException("Malformed uri")
+        val g = lookup(id)?.takeIf { !it.failed } ?: throw IOException("Download not running")
+        transferInitializing(dataSpec)
+        growing = g
+        file = RandomAccessFile(g.file, "r").also { it.seek(dataSpec.position) }
+        position = dataSpec.position
+        bytesRemaining = when {
+            dataSpec.length != C.LENGTH_UNSET.toLong() -> dataSpec.length
+            g.total > 0 -> (g.total - position).coerceAtLeast(0)
+            else -> C.LENGTH_UNSET.toLong()
+        }
+        opened = true
+        transferStarted(dataSpec)
+        return bytesRemaining
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        if (length == 0) return 0
+        if (bytesRemaining == 0L) return C.RESULT_END_OF_INPUT
+        val g = growing ?: throw IOException("Not opened")
+        var lastWritten = g.written
+        var lastChange = SystemClock.elapsedRealtime()
+        while (g.written <= position) {
+            if (g.done) return C.RESULT_END_OF_INPUT
+            if (g.failed) throw IOException("Download failed")
+            if (g.written != lastWritten) {
+                lastWritten = g.written
+                lastChange = SystemClock.elapsedRealtime()
+            } else if (SystemClock.elapsedRealtime() - lastChange > STALL_MS) {
+                throw IOException("Download stalled")
+            }
+            sleepOrThrow()
+        }
+        var want = minOf(length.toLong(), g.written - position)
+        if (bytesRemaining != C.LENGTH_UNSET.toLong()) want = minOf(want, bytesRemaining)
+        val n = file!!.read(buffer, offset, want.toInt())
+        if (n < 0) return C.RESULT_END_OF_INPUT
+        position += n
+        if (bytesRemaining != C.LENGTH_UNSET.toLong()) bytesRemaining -= n
+        bytesTransferred(n)
+        return n
+    }
+
+    override fun getUri(): Uri? = uri
+
+    override fun close() {
+        uri = null
+        growing = null
+        try {
+            file?.close()
+        } finally {
+            file = null
+            if (opened) {
+                opened = false
+                transferEnded()
+            }
+        }
+    }
+
+    class Factory(private val lookup: (String) -> GrowingFile?) : DataSource.Factory {
+        override fun createDataSource(): DataSource = GrowingFileDataSource(lookup)
+    }
+
+    companion object {
+        const val SCHEME = "ytpart"
+        private const val STALL_MS = 25_000L
     }
 }
 
@@ -185,21 +328,29 @@ class ChunkedDataSource(private val upstream: DataSource, private val chunkSize:
     }
 }
 
-/** Sends local files straight to disk and everything else through the (cached) network stack. */
+/**
+ * Sends local files straight to disk, songs still downloading to their growing file, and
+ * everything else through the (cached) network stack.
+ */
 class RoutingDataSource(
     private val local: DataSource,
     private val remote: DataSource,
+    private val growing: DataSource,
 ) : DataSource {
     private var active: DataSource? = null
 
     override fun addTransferListener(transferListener: TransferListener) {
         local.addTransferListener(transferListener)
         remote.addTransferListener(transferListener)
+        growing.addTransferListener(transferListener)
     }
 
     override fun open(dataSpec: DataSpec): Long {
-        val scheme = dataSpec.uri.scheme
-        val source = if (scheme == "file" || scheme == "content") local else remote
+        val source = when (dataSpec.uri.scheme) {
+            "file", "content" -> local
+            GrowingFileDataSource.SCHEME -> growing
+            else -> remote
+        }
         active = source
         return source.open(dataSpec)
     }
@@ -222,8 +373,9 @@ class RoutingDataSource(
     class Factory(
         private val local: DataSource.Factory,
         private val remote: DataSource.Factory,
+        private val growing: DataSource.Factory,
     ) : DataSource.Factory {
         override fun createDataSource(): DataSource =
-            RoutingDataSource(local.createDataSource(), remote.createDataSource())
+            RoutingDataSource(local.createDataSource(), remote.createDataSource(), growing.createDataSource())
     }
 }

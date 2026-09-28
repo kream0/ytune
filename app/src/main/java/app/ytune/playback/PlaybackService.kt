@@ -89,8 +89,8 @@ class PlaybackService : MediaSessionService() {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         val local = DefaultDataSource.Factory(this)
         val dataSourceFactory = ResolvingDataSource.Factory(
-            RoutingDataSource.Factory(local, remote),
-            TrackResolver(Graph.library, Graph.settings),
+            RoutingDataSource.Factory(local, remote, GrowingFileDataSource.Factory(Graph.downloads::growing)),
+            TrackResolver(Graph.library, Graph.settings, Graph.downloads),
         )
 
         player = ExoPlayer.Builder(this)
