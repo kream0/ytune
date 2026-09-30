@@ -2,7 +2,7 @@ name: Probe
 # Throwaway diagnostics (see probe/): runs only when the probe changes.
 on:
   push:
-    paths: ['probe/**', '.github/workflows/probe.yml']
+    paths: ['probe/**', '.github/workflows/probe.yml', 'app/src/main/java/app/ytune/yt/MusicAlbums.kt']
 jobs:
   probe:
     runs-on: ubuntu-latest
