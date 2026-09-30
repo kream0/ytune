@@ -13,5 +13,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # JitPack sometimes answers "not found" for a moment: retry.
-      - run: for i in 1 2 3; do ./gradlew --no-daemon -q -p probe run --refresh-dependencies && exit 0; sleep 20; done; exit 1
+      # The app build's Gradle cache already has NewPipe (JitPack is flaky at serving it).
+      - uses: actions/cache/restore@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/libs.versions.toml', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+      - run: for i in 1 2 3; do ./gradlew --no-daemon -q -p probe run && exit 0; sleep 20; done; exit 1
