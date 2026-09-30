@@ -12,7 +12,8 @@ object AlbumMatch {
 
     enum class Kind { ALBUM, EP, SINGLE, COMPILATION }
 
-    data class Album(val title: String, val artist: String, val kind: Kind)
+    /** [tracks]: how many tracks the release has, when the catalogue says (single-disc only). */
+    data class Album(val title: String, val artist: String, val kind: Kind, val tracks: Int? = null)
 
     // ------------------------------------------------------------------ album name
 
@@ -50,7 +51,30 @@ object AlbumMatch {
         val collection: String,
         val collectionArtist: String?,
         val durationMs: Long,
-    )
+        /** Tracks on the song's disc of the release, and how many discs it has. */
+        val trackCount: Int? = null,
+        val discCount: Int? = null,
+    ) {
+        /** The release's track count, when it's a single disc (multi-disc totals aren't given). */
+        val releaseTracks: Int? get() = trackCount?.takeIf { it > 0 && (discCount == null || discCount <= 1) }
+    }
+
+    /** The release's name without the catalogue's " - Single" / " - EP" suffix. */
+    private fun releaseName(collection: String) = collection.removeSuffix(" - Single").removeSuffix(" - EP")
+
+    /**
+     * How many tracks [album] has, from catalogue results (e.g. when the album's name came from
+     * YouTube, which doesn't say): a listed song of the same artist on a release of that name.
+     */
+    fun trackCountOf(results: List<CatalogSong>, album: Album): Int? {
+        val name = norm(album.title)
+        val artist = norm(album.artist)
+        return results.firstOrNull { s ->
+            norm(releaseName(s.collection)) == name &&
+                artistMatches(norm(s.collectionArtist ?: s.artist), artist) &&
+                s.releaseTracks != null
+        }?.releaseTracks
+    }
 
     /**
      * The release [title] by [artist] is on, from catalogue search results: the album if there is
@@ -74,9 +98,10 @@ object AlbumMatch {
             if (durationSec > 0 && s.durationMs > 0) abs(s.durationMs / 1000 - durationSec) else 0L
         val best = matching.minWith(compareBy<CatalogSong>({ kindOf(it).ordinal }, { lengthOff(it) }))
         return Album(
-            title = best.collection.removeSuffix(" - Single").removeSuffix(" - EP"),
+            title = releaseName(best.collection),
             artist = best.collectionArtist?.takeUnless { kindOf(best) == Kind.COMPILATION } ?: best.artist,
             kind = kindOf(best),
+            tracks = best.releaseTracks,
         )
     }
 

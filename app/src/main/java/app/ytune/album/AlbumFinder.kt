@@ -68,7 +68,10 @@ class AlbumFinder(private val http: OkHttpClient) {
             .getOrNull()
             ?.let(AlbumMatch::albumFromTopicDescription)
             ?.let { AlbumMatch.Album(it, song.artist, AlbumMatch.Kind.ALBUM) }
-        val album = fromYouTube ?: catalogRelease(song.title, song.artist, track.durationSec)?.also { reached = true }
+        // The catalogue also gives the album's track count (YouTube's description doesn't).
+        val catalog = catalogSongs(song.title, song.artist)?.also { reached = true }.orEmpty()
+        val album = (fromYouTube ?: AlbumMatch.pickRelease(catalog, song.title, song.artist, track.durationSec))
+            ?.let { a -> if (a.tracks != null) a else a.copy(tracks = AlbumMatch.trackCountOf(catalog, a)) }
         if (album == null) {
             if (!reached) throw IOException("Couldn't reach YouTube")
             return@withContext AlbumResult.Unknown.also { cache[track.id] = it }
@@ -107,7 +110,10 @@ class AlbumFinder(private val http: OkHttpClient) {
             .map { AlbumOption(it, isAlbum = false, tracks = it.count.takeIf { n -> n >= 0 }?.toInt(), hasSong = false) }
             .filter { isWholeRelease(it, album) }
             .take(MAX_PLAYLISTS)
-        albums.filter { isWholeRelease(it, album) } + playlists
+        // Same number of tracks as the album is the best hint it's the real thing: those first,
+        // otherwise the order above stays.
+        (albums.filter { isWholeRelease(it, album) } + playlists)
+            .sortedBy { album.tracks == null || it.tracks != album.tracks }
     }
 
     /**
@@ -156,9 +162,12 @@ class AlbumFinder(private val http: OkHttpClient) {
         val collectionName: String? = null,
         val collectionArtistName: String? = null,
         val trackTimeMillis: Long = 0,
+        val trackCount: Int? = null,
+        val discCount: Int? = null,
     )
 
-    private fun catalogRelease(title: String, artist: String, durationSec: Long): AlbumMatch.Album? {
+    /** Catalogue songs matching "artist title"; null when it couldn't be reached. */
+    private fun catalogSongs(title: String, artist: String): List<AlbumMatch.CatalogSong>? {
         val country = Locale.getDefault().country.takeIf { it.length == 2 } ?: "US"
         val url = "https://itunes.apple.com/search".toHttpUrl().newBuilder()
             .addQueryParameter("term", "$artist $title")
@@ -175,13 +184,15 @@ class AlbumFinder(private val http: OkHttpClient) {
             Log.w(TAG, "catalogue lookup failed", e)
             return null
         }
-        val songs = runCatching { AppJson.decodeFromString(ItunesResponse.serializer(), body).results }
+        return runCatching { AppJson.decodeFromString(ItunesResponse.serializer(), body).results }
             .getOrDefault(emptyList())
             .filter { it.kind == "song" && it.trackName != null && it.artistName != null && it.collectionName != null }
             .map {
-                AlbumMatch.CatalogSong(it.trackName!!, it.artistName!!, it.collectionName!!, it.collectionArtistName, it.trackTimeMillis)
+                AlbumMatch.CatalogSong(
+                    it.trackName!!, it.artistName!!, it.collectionName!!, it.collectionArtistName,
+                    it.trackTimeMillis, it.trackCount, it.discCount,
+                )
             }
-        return AlbumMatch.pickRelease(songs, title, artist, durationSec)
     }
 
     private companion object {

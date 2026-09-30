@@ -188,7 +188,11 @@ object Actions {
      */
     private fun albumChoices(result: AlbumResult.Options): SheetSpec = SheetSpec(
         title = result.album.title,
-        subtitle = "${result.album.artist} · ✓ = has this song",
+        subtitle = listOfNotNull(
+            result.album.artist,
+            result.album.tracks?.let { "${tracksLabel(it)} on the album (listed first)" },
+            "✓ = has this song",
+        ).joinToString(" · "),
         actions = result.options.map { o ->
             val parts = buildList {
                 add(o.ref.title + if (o.hasSong) "  ✓" else "")
