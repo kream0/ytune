@@ -1,0 +1,16 @@
+name: Probe
+# Throwaway diagnostics (see probe/): runs only when the probe changes.
+on:
+  push:
+    paths: ['probe/**', '.github/workflows/probe.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: ./gradlew --no-daemon -q -p probe run
