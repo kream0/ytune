@@ -65,21 +65,38 @@ class LrcLib(
             artist?.let { addQueryParameter("artist_name", it) }
         }.build()
         val request = Request.Builder().url(url).header("User-Agent", userAgent).build()
-        return try {
-            http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    onError("lyrics search: HTTP ${response.code}", null)
-                    return null
+        repeat(MAX_TRIES) { attempt ->
+            try {
+                http.newCall(request).execute().use { response ->
+                    when {
+                        response.isSuccessful -> return parse(response.body?.string() ?: return null)
+                        // Busy: it says how long to wait (a second, usually).
+                        response.code == 429 || response.code == 503 -> {
+                            val wait = response.header("Retry-After")?.toLongOrNull()?.coerceIn(1, MAX_WAIT_SEC) ?: 1
+                            onError("lyrics search: HTTP ${response.code}, retry in ${wait}s", null)
+                            if (attempt < MAX_TRIES - 1) Thread.sleep(wait * 1000)
+                        }
+                        else -> {
+                            onError("lyrics search: HTTP ${response.code}", null)
+                            return null
+                        }
+                    }
                 }
-                parse(response.body?.string() ?: return null)
+            } catch (e: IOException) {
+                onError("lyrics search failed", e)
+                return null
+            } catch (e: RuntimeException) {
+                onError("lyrics answer unreadable", e) // not JSON
+                return null
             }
-        } catch (e: Exception) {
-            onError("lyrics search failed", e)
-            null
         }
+        return null
     }
 
     companion object {
+        private const val MAX_TRIES = 3
+        private const val MAX_WAIT_SEC = 5L
+
         /** An LRCLIB search answer; entries that aren't objects are skipped, missing fields default. */
         fun parse(json: String): List<LyricsQuery.Candidate> =
             (Json.parseToJsonElement(json) as? JsonArray).orEmpty().mapNotNull { e ->

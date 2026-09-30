@@ -161,45 +161,21 @@ fun main() {
         if (moreLife.isEmpty()) dumpIds(raw)
     }
 
-    section("Our album search: More Life") {
-        MusicAlbums.search("More Life").forEach { println("album: ${it.title} | ${it.artist} | ${it.kind} | ${it.year} | ${it.url}") }
-    }
-
-    section("Our album search: Drake Scorpion") {
-        val a = MusicAlbums.search("Drake Scorpion")
-        a.forEach { println("album: ${it.title} | ${it.artist} | ${it.kind} | ${it.year} | ${it.url}") }
-        scorpion = a.firstOrNull { it.title == "Scorpion" }?.url.orEmpty()
-    }
-
-    section("NewPipe album search: Drake More Life (for comparison)") {
-        val s = yt.getSearchExtractor("Drake More Life", listOf(F.MUSIC_ALBUMS), "").also { it.fetchPage() }
-        s.initialPage.items.filterIsInstance<PlaylistInfoItem>().forEach { println("album: ${it.name} | ${it.uploaderName} | ${it.url}") }
-        println("errors: ${s.initialPage.errors.map { it.message }}")
-    }
-
-    section("Album items: More Life $moreLife") {
-        items(moreLife) { it.name.contains("Fake Love", true) || it.name.contains("Passionfruit", true) }
-    }
-
-    section("Album items: Scorpion $scorpion") {
-        items(scorpion) { it.name.contains("God's Plan", true) || it.name.contains("Nonstop", true) }
-    }
-
-    section("User playlists: More Life Drake") {
-        val s = yt.getSearchExtractor("More Life Drake", listOf(F.PLAYLISTS), "").also { it.fetchPage() }
-        val lists = s.initialPage.items.filterIsInstance<PlaylistInfoItem>()
-        lists.take(4).forEach { println("playlist: ${it.name} | [${it.uploaderName}] | count=${it.streamCount} | ${it.url}") }
-        lists.firstOrNull()?.let { items(it.url) { i -> i.name.contains("Fake Love", true) || i.name.contains("Passionfruit", true) } }
-    }
-
-    section("Old vs new lyrics, whole album: More Life") { compareAlbum(moreLife) }
-    section("Old vs new lyrics, whole album: Scorpion") { compareAlbum(scorpion) }
-    section("Old vs new lyrics, song search results") {
-        val s = yt.getSearchExtractor("Drake", listOf(F.MUSIC_SONGS), "").also { it.fetchPage() }
-        s.initialPage.items.filterIsInstance<StreamInfoItem>().take(10).forEach {
-            val (o, nw) = compare(it.name, it.uploaderName.orEmpty().removeSuffix(" - Topic"), it.duration)
-            println("  ${it.name} | ${it.uploaderName} | ${it.duration}s  old=$o  new=$nw")
+    section("App lyrics client, in a burst: albums + song results") {
+        val client = LrcLib(http, "YTune-probe (https://github.com/kream0/ytune)") { m, e -> println("    $m ${e?.message ?: ""}") }
+        val tracks = listOf(moreLife, scorpion).flatMap { url ->
+            yt.getPlaylistExtractor(url).also { it.fetchPage() }.initialPage.items
+        } + yt.getSearchExtractor("Drake", listOf(F.MUSIC_SONGS), "").also { it.fetchPage() }
+            .initialPage.items.filterIsInstance<StreamInfoItem>().take(10)
+        var ok = 0
+        val t0 = System.currentTimeMillis()
+        tracks.forEach {
+            val r = runCatching { client.lyrics(it.name, it.uploaderName.orEmpty().removeSuffix(" - Topic"), it.duration.coerceAtLeast(0)) }
+            val label = r.fold({ res -> res.javaClass.simpleName }, { e -> "ERROR ${e.javaClass.simpleName}" })
+            if (label == "Found" || label == "Instrumental") ok++
+            println("  ${it.name} | ${it.duration}s -> $label")
         }
+        println("  => $ok/${tracks.size} in ${(System.currentTimeMillis() - t0) / 1000}s")
     }
 
     section("Lyrics for the song search item (baseline)") {

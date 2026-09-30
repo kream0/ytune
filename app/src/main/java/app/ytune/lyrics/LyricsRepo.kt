@@ -8,6 +8,7 @@ import app.ytune.data.Track
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -36,9 +37,13 @@ class LyricsRepo(context: Context, http: OkHttpClient, scope: CoroutineScope) {
     )
 
     init {
-        // Saved songs get their lyrics in the background, one at a time.
+        // Saved songs get their lyrics in the background, one at a time and spaced out: saving an
+        // album queues them all at once, and LRCLIB answers "busy" to bursts.
         scope.launch(Dispatchers.IO) {
-            for (track in prefetchQueue) runCatching { get(track) }
+            for (track in prefetchQueue) {
+                runCatching { get(track) }
+                delay(PREFETCH_GAP_MS)
+            }
         }
     }
 
@@ -69,6 +74,8 @@ class LyricsRepo(context: Context, http: OkHttpClient, scope: CoroutineScope) {
         val instrumental: Boolean = false,
         val missing: Boolean = false,
         val savedAt: Long = System.currentTimeMillis(),
+        /** [CACHE_VERSION] when written; "not found" from older versions is asked again. */
+        val v: Int = 0,
     )
 
     @Serializable
@@ -82,7 +89,7 @@ class LyricsRepo(context: Context, http: OkHttpClient, scope: CoroutineScope) {
         val s = AppJson.decodeFromString(Stored.serializer(), f.readText())
         when {
             // Not found yet: ask again after a few days, the database keeps growing.
-            s.missing -> if (System.currentTimeMillis() - s.savedAt > MISSING_TTL_MS) null else LyricsResult.Missing
+            s.missing -> if (s.v < CACHE_VERSION || System.currentTimeMillis() - s.savedAt > MISSING_TTL_MS) null else LyricsResult.Missing
             s.instrumental -> LyricsResult.Instrumental
             else -> LyricsResult.Found(
                 Lyrics(
@@ -97,9 +104,10 @@ class LyricsRepo(context: Context, http: OkHttpClient, scope: CoroutineScope) {
 
     private fun writeDisk(id: String, result: LyricsResult) {
         val stored = when (result) {
-            LyricsResult.Missing -> Stored(missing = true)
-            LyricsResult.Instrumental -> Stored(instrumental = true)
+            LyricsResult.Missing -> Stored(missing = true, v = CACHE_VERSION)
+            LyricsResult.Instrumental -> Stored(instrumental = true, v = CACHE_VERSION)
             is LyricsResult.Found -> Stored(
+                v = CACHE_VERSION,
                 synced = result.lyrics.synced,
                 lines = result.lyrics.lines.map { l ->
                     StoredLine(l.timeMs, l.text, l.words.flatMap { listOf(it.timeMs, it.start.toLong(), it.end.toLong()) })
@@ -112,5 +120,8 @@ class LyricsRepo(context: Context, http: OkHttpClient, scope: CoroutineScope) {
     private companion object {
         const val TAG = "Lyrics"
         const val MISSING_TTL_MS = 3L * 24 * 3600 * 1000
+        const val PREFETCH_GAP_MS = 1500L
+        /** 1: answers with a null duration no longer fail, so older "not found" may be wrong. */
+        const val CACHE_VERSION = 1
     }
 }
