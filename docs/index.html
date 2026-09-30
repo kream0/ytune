@@ -49,11 +49,19 @@
   --shadow: rgba(0, 0, 0, 0.6);
   /* Hardware stays dark in both themes, like the phone itself. */
   --device: #0A0A0A;
-  --device-2: #141414;
   --device-rim: #2A2A2A;
   --device-ink: #6B6B6B;
-  --glyph-off: #1C1C1C;
-  --glyph-on: #FFFFFF;
+  --alu-hi: #E3E4E5;
+  --alu: #D4D5D7;
+  --alu-lo: #C2C3C5;
+  --alu-edge: #8E9195;
+  --alu-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --plate: #C8CACD;
+  --plate-hi: #D9DADC;
+  --glass: #060709;
+  --led-off: #1F2022;
+  --led-on: #FFFFFF;
+  --rec: #D0202A;
   --grain: none;
   --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .12 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --qr-bg: #FFFFFF;
@@ -207,44 +215,124 @@ p { margin: 0; }
 
 /* the phone back */
 .stage { display: grid; justify-items: center; gap: 18px; min-width: 0; }
+/* The back of a silver Nothing Phone (4a) Pro, measured off a product photo (312 × 682 px body):
+   every size inside is in cqw, i.e. % of the phone's width. Aluminium stays silver in both themes. */
 .device {
-  aspect-ratio: 0.5;
-  border-radius: 54px;
+  container-type: inline-size;
+  aspect-ratio: 312 / 682;
+  border-radius: 9.6% / 4.4%;
   background:
-    radial-gradient(120% 60% at 30% 0%, var(--device-2), transparent 60%),
-    var(--device);
-  border: 1px solid var(--device-rim);
+    var(--alu-grain),
+    linear-gradient(100deg, rgba(255,255,255,.45), rgba(255,255,255,0) 32% 68%, rgba(0,0,0,.05)),
+    linear-gradient(180deg, var(--alu-hi), var(--alu) 45%, var(--alu-lo));
   box-shadow:
-    inset 0 0 0 6px var(--device),
-    inset 0 0 0 7px var(--device-rim),
-    0 40px 90px var(--shadow);
-  overflow: hidden;
+    0 0 0 1px var(--alu-edge),
+    inset 0 0 0 1px rgba(255,255,255,.75),
+    inset 0 0 0 3px rgba(0,0,0,.04),
+    0 40px 80px var(--shadow);
 }
-/* Nothing's see-through back: hairline hardware under the glass */
-.device .hw { position: absolute; border: 1px solid var(--device-rim); border-radius: 10px; }
-.device .hw.a { left: 11%; top: 57%; width: 34%; height: 16%; }
-.device .hw.b { left: 50%; top: 61%; width: 39%; height: 8%; border-radius: 6px; }
-.device .hw.c { left: 11%; top: 77%; width: 78%; height: 11%; border-radius: 16px; }
-.device .hw.c::before, .device .hw.c::after { content: ""; position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--device-rim); transform: translateY(-50%); }
-.device .hw.c::before { left: 14px; } .device .hw.c::after { right: 14px; }
-.device .lens {
-  position: absolute; left: 11%; top: 6.5%;
-  width: 26%; aspect-ratio: 0.52; border-radius: 40px;
-  border: 1px solid var(--device-rim);
-  display: grid; align-content: space-evenly; justify-items: center;
+/* the band where the back meets the frame, round the bottom */
+.device::before {
+  content: ""; position: absolute; left: 2.6%; right: 2.6%; bottom: 1.3%; height: 11%;
+  border: 1px solid rgba(0, 0, 0, .1); border-top: 0;
+  border-radius: 0 0 7.4% 7.4% / 0 0 29% 29%;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .55);
 }
-.device .lens i { width: 58%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2a2a2a, #050505 62%); border: 1px solid var(--device-rim); }
-.device .matrix-btn {
-  position: absolute; right: 9%; top: 6.5%;
-  width: 52%; aspect-ratio: 1; padding: 0;
-  border: 0; background: transparent; cursor: pointer; border-radius: 50%;
+.device .key {
+  position: absolute; left: -1.9%; width: 2.2%; border-radius: 2px 0 0 2px;
+  background: linear-gradient(90deg, var(--alu-edge), var(--alu-hi) 55%, var(--alu-lo));
 }
-.device .matrix-btn canvas { width: 100%; height: 100%; display: block; }
-.device .stamp {
-  position: absolute; left: 11%; bottom: 6%;
-  font-family: var(--f-mono); font-size: 9px; letter-spacing: .18em; color: var(--device-ink);
+.device .key.k1 { top: 28.2%; height: 5.6%; }
+.device .key.k2 { top: 35.2%; height: 5.7%; }
+.device .key.k3 { top: 46.2%; height: 5.7%; }
+.device .gap { position: absolute; width: .9%; height: .7%; background: var(--alu-lo); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.device .gap.t1 { top: 0; left: 21.7%; } .device .gap.t2 { top: 0; left: 78.3%; }
+.device .gap.b1 { bottom: 0; left: 37.8%; } .device .gap.b2 { bottom: 0; left: 61.2%; }
+.device .engrave {
+  position: absolute; left: 5.5%; top: 89.3%; width: 16.7%; aspect-ratio: 1; border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, .16); box-shadow: 0 1px 0 rgba(255, 255, 255, .6), inset 0 1px 0 rgba(255, 255, 255, .5);
 }
-.stage .label { text-align: center; max-width: 36ch; line-height: 1.7; }
+
+/* "The Window": a raised clear cover over the camera plate */
+.win {
+  position: absolute; left: 4.5cqw; top: 4.8cqw; width: 90.4cqw; height: 68cqw;
+  border-radius: 12.2cqw;
+  background: linear-gradient(150deg, #F6F7F8, #C2C4C7 38%, #E9EAEB 62%, #B4B7BA);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, .22),
+    0 1.6cqw 3.4cqw rgba(0, 0, 0, .16),
+    inset 0 0 0 .5cqw rgba(255, 255, 255, .55);
+}
+.win::after { /* the clear plastic's sheen, over everything */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background:
+    linear-gradient(125deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,0) 26%),
+    linear-gradient(305deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 20%);
+  box-shadow: inset 0 .4cqw .6cqw rgba(255, 255, 255, .5);
+}
+.win > * { position: absolute; }
+.win .plate {
+  inset: 4.6cqw; border-radius: 8cqw;
+  background: linear-gradient(160deg, var(--plate-hi), var(--plate) 55%, var(--plate-hi));
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .24), inset 0 .6cqw 1.4cqw rgba(0, 0, 0, .16);
+}
+.win .sub { /* the dotted plate under the matrix */
+  left: 49.3cqw; top: 44.5cqw; width: 36.5cqw; height: 18.9cqw;
+  border-radius: 6cqw 0 8cqw 0;
+  background: radial-gradient(circle, rgba(0,0,0,.13) .22cqw, transparent .3cqw) 0 0 / 1.1cqw 1.1cqw, var(--plate-hi);
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, .12), -1px -1px 0 rgba(255, 255, 255, .5);
+}
+.win .lens {
+  border-radius: 50%; background: var(--glass);
+  box-shadow: 0 0 0 1.1cqw #DADCDE, 0 0 0 1.5cqw #8F9296, 0 .8cqw 1.6cqw 1.5cqw rgba(0, 0, 0, .22), inset 0 0 0 .5cqw #25272B;
+}
+.win .lens i {
+  position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #9DB8D8 0 7%, #2E4666 18%, #0C1220 42%, #020305 70%);
+  box-shadow: 0 0 0 .5cqw #1B1D22, 0 0 0 .8cqw #33363C;
+}
+.win .main { left: 6.45cqw; top: 7.65cqw; width: 24.5cqw; height: 24.5cqw; }
+.win .main i { left: 8.4cqw; top: 8.4cqw; width: 7.7cqw; height: 7.7cqw; }
+.win .pill { left: 7.05cqw; top: 36.9cqw; width: 42.3cqw; height: 24cqw; border-radius: 12cqw; }
+.win .pill i.uw { left: 7.45cqw; top: 8.1cqw; width: 8.6cqw; height: 8.6cqw; }
+.win .pill i.tele { left: 26.4cqw; top: 8.5cqw; width: 7.2cqw; height: 7.2cqw; }
+.win .disc {
+  border-radius: 50%;
+  background: radial-gradient(circle, #909397 0 17%, #D4D6D8 20% 100%);
+  box-shadow: inset 0 0 0 .3cqw rgba(0, 0, 0, .12), 0 .3cqw .7cqw rgba(0, 0, 0, .18);
+}
+.win .sensor { left: 34.6cqw; top: 10.2cqw; width: 7.8cqw; height: 7.8cqw; background: radial-gradient(circle, #1C1D20 0 16%, #9A9DA1 19% 26%, #D4D6D8 29% 100%); }
+.win .flash { left: 34.3cqw; top: 21.4cqw; width: 8.4cqw; height: 8.4cqw; background: radial-gradient(circle at 46% 44%, #FFF7E2 0 9%, #E4CB8E 17%, #B7A276 25%, #CDCFD1 29% 100%); }
+.win .hole { left: 46.45cqw; top: 10.55cqw; width: 1.3cqw; height: 1.3cqw; border-radius: 50%; background: #7C7F83; }
+.win .dot { width: .9cqw; height: .9cqw; border-radius: 50%; background: #8A8D91; }
+.win .dot.d1 { left: 56.9cqw; top: 51.3cqw; } .win .dot.d2 { left: 59.2cqw; top: 51.3cqw; } .win .dot.d3 { left: 77.2cqw; top: 7.2cqw; }
+.win .groove { left: 11.2cqw; top: 33.8cqw; width: 7.7cqw; height: .4cqw; border-radius: 1cqw; background: #9EA1A5; }
+.win .screw {
+  width: 3.8cqw; height: 3.8cqw; border-radius: 50%;
+  background:
+    linear-gradient(#5A5D61, #5A5D61) center / 55% 16% no-repeat,
+    linear-gradient(#5A5D61, #5A5D61) center / 16% 55% no-repeat,
+    radial-gradient(circle at 38% 34%, #FAFBFB, #B3B6BA 58%, #7F8286);
+  box-shadow: 0 .25cqw .5cqw rgba(0, 0, 0, .3);
+}
+.win .s1 { left: 80.1cqw; top: 7.4cqw; } .win .s2 { left: 2.8cqw; top: 35.3cqw; }
+.win .s3 { left: 80.7cqw; top: 50.9cqw; } .win .s4 { left: 48.6cqw; top: 58.8cqw; }
+.win .rec { left: 80.1cqw; top: 44.2cqw; width: 5.1cqw; height: 4.8cqw; border-radius: .4cqw; background: var(--rec); box-shadow: inset 0 0 0 .25cqw rgba(0, 0, 0, .18); }
+.win .slot {
+  left: 55.7cqw; top: 57.3cqw; width: 20.8cqw; height: 4.3cqw; border-radius: 2.2cqw;
+  background: linear-gradient(180deg, #C4C6C9, #E6E7E9); box-shadow: inset 0 .3cqw .6cqw rgba(0, 0, 0, .22), 0 1px 0 rgba(255, 255, 255, .6);
+}
+/* the Glyph Matrix: 137 square LEDs in a black disc */
+.win .matrix-btn {
+  left: 47.4cqw; top: 8.3cqw; width: 36.4cqw; height: 36.4cqw; padding: 0;
+  border: 0; border-radius: 50%; cursor: pointer;
+  background: radial-gradient(circle, #0B0B0C 60%, #030303);
+  box-shadow: 0 0 0 .6cqw #C9CBCE, 0 0 0 1cqw #8C8F93, 0 .6cqw 1.4cqw 1cqw rgba(0, 0, 0, .2);
+  display: grid; place-items: center;
+}
+.win .matrix-btn canvas { width: 80.6%; height: 80.6%; display: block; }
+.as-is { text-transform: none; }
+.stage .label { text-align: center; max-width: 40ch; line-height: 1.7; text-wrap: balance; }
 
 /* ---------- sections ---------- */
 section { padding-block: clamp(56px, 9vw, 120px); border-top: 1px solid var(--line); }
@@ -284,9 +372,9 @@ figure { margin: 0; }
 .duo { position: relative; width: min(560px, 100%); aspect-ratio: 1 / 1.24; }
 .duo .device { position: absolute; left: 0; top: 0; width: 56%; }
 .duo .front {
-  position: absolute; right: 0; top: 18%; width: 48%;
+  position: absolute; right: 0; top: 18%; width: 45%;
   border-radius: 34px; z-index: 2;
-  box-shadow: 0 0 0 5px var(--device), 0 0 0 6px var(--device-rim), 0 40px 80px var(--shadow);
+  box-shadow: 0 0 0 5px var(--device), 0 0 0 7px var(--alu), 0 0 0 8px var(--alu-edge), 0 40px 80px var(--shadow);
 }
 
 /* ---------- offline scale ---------- */
@@ -384,7 +472,7 @@ footer a { color: var(--dim); }
   .brand b { font-size: 20px; }
   .phone { border-radius: 24px; }
   .duo .front { border-radius: 22px; }
-  .device { border-radius: 34px; }
+
   .qr-card .qr-tile { display: none; }
   .scale { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .steps li { grid-template-columns: 52px minmax(0, 1fr); }
@@ -462,21 +550,33 @@ img { max-width: 100%; }
 
       <div class="stage">
         <div class="duo">
-          <div class="device">
-            <div class="lens" aria-hidden="true"><i></i><i></i></div>
-            <button class="matrix-btn" id="matrix-btn" type="button" aria-pressed="true" aria-label="Glyph Matrix : lecture en cours. Touchez pour mettre en pause.">
-              <canvas id="matrix" width="600" height="600"></canvas>
-            </button>
-            <span class="hw a" aria-hidden="true"></span>
-            <span class="hw b" aria-hidden="true"></span>
-            <span class="hw c" aria-hidden="true"></span>
-            <span class="stamp" aria-hidden="true">YTUNE · NOW PLAYING</span>
+          <div class="device" role="img" aria-label="Dos d'un Nothing Phone (4a) Pro argent, sa Glyph Matrix fait défiler le titre en cours.">
+            <span class="key k1"></span><span class="key k2"></span><span class="key k3"></span>
+            <span class="gap t1"></span><span class="gap t2"></span><span class="gap b1"></span><span class="gap b2"></span>
+            <span class="engrave"></span>
+            <div class="win">
+              <span class="plate"></span>
+              <span class="sub"></span>
+              <span class="lens main"><i></i></span>
+              <span class="lens pill"><i class="uw"></i><i class="tele"></i></span>
+              <span class="disc sensor"></span>
+              <span class="disc flash"></span>
+              <span class="hole"></span>
+              <span class="groove"></span>
+              <span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span>
+              <span class="screw s1"></span><span class="screw s2"></span><span class="screw s3"></span><span class="screw s4"></span>
+              <span class="slot"></span>
+              <span class="rec"></span>
+              <button class="matrix-btn" id="matrix-btn" type="button" aria-pressed="true" aria-label="Glyph Matrix : lecture en cours. Touchez pour mettre en pause.">
+                <canvas id="matrix" width="520" height="520"></canvas>
+              </button>
+            </div>
           </div>
           <div class="phone front">
             <img src="screenshots/lyrics.webp" width="840" height="1755" alt="Paroles synchronisées de Peace Train (Yusuf / Cat Stevens) : la ligne chantée se remplit mot à mot, au-dessus de la barre de lecture à points."><img class="paper" src="screenshots/lyrics-paper.webp" width="840" height="1755" alt="" aria-hidden="true">
           </div>
         </div>
-        <p class="label">Au dos, la Glyph Matrix des Nothing Phone (3) et (4a) Pro<br>fait défiler le titre. Touchez-la.</p>
+        <p class="label">Au dos du Nothing Phone <span class="as-is">(4a)</span> Pro, les 137 LED de la Glyph Matrix font défiler le titre. Touchez-la.</p>
       </div>
     </div>
 
@@ -651,7 +751,7 @@ img { max-width: 100%; }
     T = {
       bg: css("--bg"), surface: css("--surface"), fg: css("--fg"), dim: css("--dim"), faint: css("--faint"),
       off: css("--dot-off"), red: css("--red"), orange: css("--s-orange"), yellow: css("--s-yellow"),
-      green: css("--s-green"), gOff: css("--glyph-off"), gOn: css("--glyph-on"), qrFg: css("--qr-fg"), qrBg: css("--qr-bg"),
+      green: css("--s-green"), ledOff: css("--led-off"), ledOn: css("--led-on"), qrFg: css("--qr-fg"), qrBg: css("--qr-bg"),
     };
   };
   readTheme();
@@ -675,19 +775,20 @@ img { max-width: 100%; }
     return cols;
   };
 
-  // ---------------------------------------------------------------- Glyph Matrix (25×25, like MatrixRenderer)
+  // ---------------------------------------------------------------- Glyph Matrix: the (4a) Pro's 137 LEDs
+  // Laid out like the app's MatrixRenderer for a 13 × 13 matrix: title on rows 1–10, a 5-dot
+  // progress bar on the last row, no equalizer (too small for one).
   const matrix = (() => {
     const canvas = document.getElementById("matrix");
     const btn = document.getElementById("matrix-btn");
     const ctx = canvas.getContext("2d");
-    const N = 25, TEXT_TOP = 6, PROG_ROW = 20, P_FROM = 4, P_TO = 20, GAP = 14;
-    const c = (N - 1) / 2, r = N / 2 + 0.25;
+    const N = 13, TEXT_TOP = 1, PROG_ROW = 12, P_FROM = 4, P_TO = 8, GAP = 14;
+    const ROWS = [5, 9, 11, 11, 13, 13, 13, 13, 13, 11, 11, 9, 5]; // 137 LEDs
     const visible = [];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) visible.push(Math.hypot(x - c, y - c) <= r);
-    const EQ = [[1, 2, 3, 4, 3, 2, 3, 1], [3, 4, 2, 1, 2, 4, 3, 2], [2, 1, 3, 2, 4, 3, 1, 3]];
-    const tracks = [["Midnight City", "M83"], ["Around the World", "Daft Punk"], ["Nightcall", "Kavinsky"], ["Instant Crush", "Daft Punk"]];
-    let t = 0, strip = [], scroll = -N, progress = 0.18, playing = true, tick = 0;
-    const load = i => { const [a, b] = tracks[i % tracks.length]; strip = layout(`${a}  ·  ${b}`); scroll = -N + 2; };
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) visible.push(Math.abs(x - 6) <= (ROWS[y] - 1) / 2);
+    const tracks = [["Peace Train", "Yusuf / Cat Stevens"], ["Wild World", "Cat Stevens"], ["Midnight City", "M83"], ["Around the World", "Daft Punk"]];
+    let strip = [], scroll = 0, progress = 0.1, playing = true;
+    const load = i => { const [a, b] = tracks[i % tracks.length]; strip = layout(`${a}  ·  ${b}`); scroll = -N + 3; };
     load(0);
 
     const frame = () => {
@@ -699,32 +800,26 @@ img { max-width: 100%; }
         if (!col) continue;
         for (let row = 0; row < 10; row++) if (col & (1 << row)) f[(TEXT_TOP + row) * N + x] = playing ? 255 : 150;
       }
-      const base = TEXT_TOP - 3;
-      if (playing) {
-        for (let b = 0; b < 3; b++) { const lv = EQ[b][Math.floor(tick / 3) % 8]; for (let h = 0; h < lv; h++) f[(base - h) * N + (Math.floor(N / 2) - 2 + b * 2)] = 200; }
-      } else {
-        for (let h = 0; h < 3; h++) { f[(base - h) * N + Math.floor(N / 2) - 1] = 200; f[(base - h) * N + Math.floor(N / 2) + 1] = 200; }
-      }
       const head = P_FROM + Math.round(progress * (P_TO - P_FROM));
-      for (let x = P_FROM; x <= P_TO; x++) f[PROG_ROW * N + x] = x <= head ? 255 : 28;
+      for (let x = P_FROM; x <= P_TO; x++) f[PROG_ROW * N + x] = x <= head ? 255 : 40;
       return f;
     };
 
     const draw = () => {
-      const W = canvas.width, cell = W / N, rad = cell * 0.36;
+      const W = canvas.width, cell = W / N, side = cell * 0.8, r = cell * 0.14;
       ctx.clearRect(0, 0, W, W);
       const f = frame();
       for (let i = 0; i < N * N; i++) {
         if (!visible[i]) continue;
-        const x = (i % N + 0.5) * cell, y = (Math.floor(i / N) + 0.5) * cell, v = f[i];
+        const x = (i % N) * cell + (cell - side) / 2, y = Math.floor(i / N) * cell + (cell - side) / 2, v = f[i];
         ctx.beginPath();
-        ctx.arc(x, y, rad, 0, Math.PI * 2);
+        ctx.roundRect ? ctx.roundRect(x, y, side, side, r) : ctx.rect(x, y, side, side);
         if (v) {
-          ctx.fillStyle = mix(T.gOff, T.gOn, v / 255);
-          ctx.shadowColor = `rgba(255,255,255,${0.55 * v / 255})`;
-          ctx.shadowBlur = cell * 0.55;
+          ctx.fillStyle = mix(T.ledOff, T.ledOn, v / 255);
+          ctx.shadowColor = `rgba(255,255,255,${0.6 * v / 255})`;
+          ctx.shadowBlur = cell * 0.6;
         } else {
-          ctx.fillStyle = T.gOff;
+          ctx.fillStyle = T.ledOff;
           ctx.shadowBlur = 0;
         }
         ctx.fill();
@@ -736,12 +831,11 @@ img { max-width: 100%; }
     const step = now => {
       if (!last) last = now;
       acc += now - last; last = now;
-      while (acc >= 85) {
-        acc -= 85;
-        tick++;
+      while (acc >= 95) {
+        acc -= 95;
         if (playing) {
           scroll++;
-          progress += 0.0011;
+          progress += 0.0012;
           if (progress >= 1) { progress = 0; load(++track); }
         }
       }
@@ -753,7 +847,7 @@ img { max-width: 100%; }
       btn.setAttribute("aria-label", playing ? "Glyph Matrix : lecture en cours. Touchez pour mettre en pause." : "Glyph Matrix : en pause. Touchez pour reprendre.");
       if (reduce) draw();
     });
-    if (reduce) { scroll = 0; draw(); }
+    if (reduce) { scroll = 1; draw(); }
     return { step, draw, el: canvas };
   })();
 
