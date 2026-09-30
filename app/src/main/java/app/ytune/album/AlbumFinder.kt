@@ -4,6 +4,7 @@ import android.util.Log
 import app.ytune.data.AppJson
 import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
+import app.ytune.lyrics.SameSong
 import app.ytune.yt.PlaylistResult
 import app.ytune.yt.SearchFilter
 import app.ytune.yt.SongResult
@@ -22,6 +23,9 @@ sealed interface AlbumResult {
 
     /** Not released on YouTube, but uploaded as one long "full album" video. */
     data class FullVideo(val album: AlbumMatch.Album, val video: Track) : AlbumResult
+
+    /** Releases named like the album that couldn't be confirmed: the user picks. */
+    data class Choose(val album: AlbumMatch.Album, val refs: List<PlaylistRef>) : AlbumResult
 
     /** We know the album, but it isn't on YouTube. */
     data class NotOnYouTube(val album: AlbumMatch.Album) : AlbumResult
@@ -58,20 +62,39 @@ class AlbumFinder(private val http: OkHttpClient) {
                 return AlbumResult.Unknown.also { cache[track.id] = it }
             }
 
-        val result = onYouTube(album) ?: fullAlbumVideo(album) ?: AlbumResult.NotOnYouTube(album)
-        cache[track.id] = result
+        val result = onYouTube(album, track) ?: fullAlbumVideo(album) ?: AlbumResult.NotOnYouTube(album)
+        if (result !is AlbumResult.Choose) cache[track.id] = result
         return result
     }
 
-    private fun onYouTube(album: AlbumMatch.Album): AlbumResult.OnYouTube? {
-        val results = runCatching {
-            YouTube.search("${album.artist} ${album.title}", SearchFilter.ALBUMS).loadNext()
-        }.getOrElse { return null }
-        val refs = results.filterIsInstance<PlaylistResult>().map { it.ref }
-        val listing = AlbumMatch.pickAlbum(refs.map { AlbumMatch.Listing(it.title, it.uploader, it.url) }, album)
-            ?: return null
-        val ref = refs.first { it.url == listing.url }
-        return AlbumResult.OnYouTube(album, ref.copy(isAlbum = true))
+    /**
+     * Among YouTube Music albums named like [album], the one that contains [track] (same video,
+     * or the same song by title and artist). Falls back to a title + artist match, then to
+     * letting the user choose among the lookalikes.
+     */
+    private fun onYouTube(album: AlbumMatch.Album, track: Track): AlbumResult? {
+        val refs = listOf("${album.artist} ${album.title}", album.title)
+            .flatMap { q ->
+                runCatching { YouTube.search(q, SearchFilter.ALBUMS).loadNext() }.getOrDefault(emptyList())
+            }
+            .filterIsInstance<PlaylistResult>()
+            .map { it.ref.copy(isAlbum = true) }
+            .distinctBy { it.url }
+        val candidates = AlbumMatch.candidates(refs.map { AlbumMatch.Listing(it.title, it.uploader, it.url) }, album)
+        if (candidates.isEmpty()) return null
+        fun ref(c: AlbumMatch.Candidate) = refs.first { it.url == c.listing.url }
+
+        candidates.take(MAX_CHECKED).firstOrNull { contains(it.listing.url, track) }
+            ?.let { return AlbumResult.OnYouTube(album, ref(it)) }
+        candidates.firstOrNull { it.byArtist }?.let { return AlbumResult.OnYouTube(album, ref(it)) }
+        return AlbumResult.Choose(album, candidates.take(MAX_CHOICES).map(::ref))
+    }
+
+    /** Whether the album at [url] has [track] in it (first page is the whole album in practice). */
+    private fun contains(url: String, track: Track): Boolean {
+        val tracks = runCatching { YouTube.playlist(url).loadNext() }.getOrElse { return false }
+        val song = SameSong().apply { add(track.title, track.artist) }
+        return tracks.any { it.id == track.id || (it.title to it.artist) in song }
     }
 
     private fun fullAlbumVideo(album: AlbumMatch.Album): AlbumResult.FullVideo? {
@@ -128,5 +151,8 @@ class AlbumFinder(private val http: OkHttpClient) {
 
     private companion object {
         const val TAG = "Albums"
+        /** Lookalike albums opened to look for the song. */
+        const val MAX_CHECKED = 4
+        const val MAX_CHOICES = 6
     }
 }

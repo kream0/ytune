@@ -85,18 +85,31 @@ object AlbumMatch {
     /** An album / playlist search result. */
     data class Listing(val title: String, val uploader: String, val url: String)
 
+    /** A search result named like the album; [byArtist] = its listed artist matches too. */
+    data class Candidate(val listing: Listing, val byArtist: Boolean, val exactTitle: Boolean)
+
     /**
-     * The YouTube Music album that is [album]: same title (an exact match beats a "Deluxe" /
-     * "Remastered" edition) by the same artist. Null rather than a guess.
+     * Search results that could be [album]: same title (or the same with a "Deluxe" /
+     * "Remastered" suffix), best first: exact title before editions, then by the artist before
+     * others (the artist YouTube lists isn't always parsed right, so they aren't dropped).
+     * Whether one really is the album is then checked by looking for the song in it.
      */
-    fun pickAlbum(results: List<Listing>, album: Album): Listing? {
+    fun candidates(results: List<Listing>, album: Album): List<Candidate> {
         val exact = norm(album.title)
         val base = norm(bare(album.title))
         val artist = norm(album.artist)
-        val byArtist = results.filter { artistMatches(norm(it.uploader), artist) }
-        return byArtist.firstOrNull { norm(it.title) == exact }
-            ?: byArtist.firstOrNull { norm(bare(it.title)) == base && base.isNotEmpty() }
+        return results.distinctBy { it.url }
+            .mapNotNull { l ->
+                val isExact = norm(l.title) == exact
+                if (!isExact && (base.isEmpty() || norm(bare(l.title)) != base)) return@mapNotNull null
+                Candidate(l, artistMatches(norm(l.uploader), artist), isExact)
+            }
+            .sortedWith(compareBy({ !it.exactTitle }, { !it.byArtist }))
     }
+
+    /** The album that is [album] from metadata alone (title + artist), or null rather than a guess. */
+    fun pickAlbum(results: List<Listing>, album: Album): Listing? =
+        candidates(results, album).firstOrNull { it.byArtist }?.listing
 
     /**
      * Whether a video is the whole album in one upload ("Artist - Album (Full Album)"): long,

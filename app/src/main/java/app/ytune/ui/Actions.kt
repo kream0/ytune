@@ -171,6 +171,18 @@ object Actions {
                         )
                     )
                 }
+                is AlbumResult.Choose -> Nav.showSheet(
+                    SheetSpec(
+                        title = result.album.title,
+                        subtitle = "${result.album.artist} · which one is it?",
+                        actions = result.refs.map { ref ->
+                            SheetAction(
+                                listOf(ref.title, ref.uploader).filter { it.isNotBlank() }.joinToString("  ·  "),
+                                Ic.Album,
+                            ) { Nav.openPlaylist(ref) }
+                        },
+                    )
+                )
                 is AlbumResult.NotOnYouTube -> Graph.toast("“${result.album.title}” isn't on YouTube")
                 AlbumResult.Unknown -> Graph.toast("Couldn't tell which album this song is from")
             }
