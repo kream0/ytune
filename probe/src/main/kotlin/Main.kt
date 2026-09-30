@@ -159,6 +159,8 @@ fun main() {
         println("-- search + resolve took ${System.currentTimeMillis() - t0} ms")
         moreLife = MusicAlbums.search("Drake More Life").firstOrNull { it.title == "More Life" }?.url.orEmpty()
         if (moreLife.isEmpty()) dumpIds(raw)
+        scorpion = MusicAlbums.search("Drake Scorpion").firstOrNull { it.title == "Scorpion" }?.url.orEmpty()
+        println("scorpion=$scorpion")
     }
 
     section("App lyrics client, in a burst: albums + song results") {
