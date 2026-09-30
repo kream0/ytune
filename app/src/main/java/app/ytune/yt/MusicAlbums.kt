@@ -56,7 +56,7 @@ object MusicAlbums {
 
     private fun albumOf(item: JsonObject): Album? {
         val columns = (item["flexColumns"] as? JsonArray)?.map {
-            it.obj("musicResponsiveListItemFlexColumnRenderer")?.obj("text")?.runs().orEmpty()
+            (it as? JsonObject)?.obj("musicResponsiveListItemFlexColumnRenderer")?.obj("text")?.runs().orEmpty()
         }.orEmpty()
         val title = columns.getOrNull(0)?.joinToString("") { it.text }?.trim().orEmpty()
         if (title.isEmpty()) return null
