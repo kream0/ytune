@@ -77,7 +77,8 @@ class SearchViewModel : ViewModel() {
         if (f == filter) return
         filter = f
         Graph.settings.update { it.copy(searchFilter = f.name) }
-        _ui.value.query?.let { search(it) }
+        // Search what's in the box now (it may have been edited since the last search).
+        (query.takeIf { it.isNotBlank() } ?: _ui.value.query)?.let { search(it) }
     }
 
     fun search(text: String = query) {

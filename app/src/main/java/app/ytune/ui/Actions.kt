@@ -11,6 +11,7 @@ import app.ytune.ui.components.NameEntry
 import app.ytune.ui.components.SheetAction
 import app.ytune.ui.components.SheetSpec
 import app.ytune.yt.YouTube
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -150,13 +151,17 @@ object Actions {
         Graph.toast("Looking for the album…")
         Graph.scope.launch {
             val result = try {
-                withContext(Dispatchers.IO) { Graph.albums.find(track) }
+                Graph.albums.find(track)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Graph.toast("Couldn't look up the album (${e.message ?: "offline?"})")
                 return@launch
             }
             when (result) {
-                is AlbumResult.OnYouTube -> Nav.openPlaylist(result.ref)
+                is AlbumResult.Options ->
+                    if (result.options.size == 1) Nav.openPlaylist(result.options[0].ref)
+                    else Nav.showSheet(albumChoices(result))
                 is AlbumResult.FullVideo -> {
                     val video = result.video
                     Nav.showSheet(
@@ -171,23 +176,31 @@ object Actions {
                         )
                     )
                 }
-                is AlbumResult.Choose -> Nav.showSheet(
-                    SheetSpec(
-                        title = result.album.title,
-                        subtitle = "${result.album.artist} · which one is it?",
-                        actions = result.refs.map { ref ->
-                            SheetAction(
-                                listOf(ref.title, ref.uploader).filter { it.isNotBlank() }.joinToString("  ·  "),
-                                Ic.Album,
-                            ) { Nav.openPlaylist(ref) }
-                        },
-                    )
-                )
                 is AlbumResult.NotOnYouTube -> Graph.toast("“${result.album.title}” isn't on YouTube")
                 AlbumResult.Unknown -> Graph.toast("Couldn't tell which album this song is from")
             }
         }
     }
+
+    /**
+     * Pick where to play the album: YouTube Music albums first (✓ = the song is in it), then
+     * playlists of it, each with its number of tracks.
+     */
+    private fun albumChoices(result: AlbumResult.Options): SheetSpec = SheetSpec(
+        title = result.album.title,
+        subtitle = "${result.album.artist} · ✓ = has this song",
+        actions = result.options.map { o ->
+            val parts = buildList {
+                add(o.ref.title + if (o.hasSong) "  ✓" else "")
+                if (o.ref.uploader.isNotBlank()) add(o.ref.uploader)
+                add(if (o.isAlbum) "Album" else "Playlist")
+                o.tracks?.let { add(tracksLabel(it)) }
+            }
+            SheetAction(parts.joinToString("  ·  "), if (o.isAlbum) Ic.Album else Ic.PlaylistPlay) {
+                Nav.openPlaylist(o.ref)
+            }
+        },
+    )
 
     // ------------------------------------------------------------------ your own playlists
 

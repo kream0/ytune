@@ -112,6 +112,18 @@ object AlbumMatch {
         candidates(results, album).firstOrNull { it.byArtist }?.listing
 
     /**
+     * Whether a (user-made) playlist is about [album]: its title has the album's name, and the
+     * artist is in the title or is the uploader. Filters out the unrelated ones a search returns.
+     */
+    fun playlistAbout(title: String, uploader: String, album: Album): Boolean {
+        val t = norm(title)
+        val name = norm(bare(album.title))
+        if (name.length < 2 || !t.contains(name)) return false
+        val artist = norm(album.artist)
+        return t.contains(artist) || artistMatches(norm(uploader), artist)
+    }
+
+    /**
      * Whether a video is the whole album in one upload ("Artist - Album (Full Album)"): long,
      * named after the album, and by or about the artist.
      */
