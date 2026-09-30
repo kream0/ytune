@@ -1,6 +1,24 @@
-# YTune
+<p align="center"><img src="docs/icon.png" width="112" alt="YTune icon"></p>
 
-A sideloadable Android music player for YouTube, styled after Nothing OS (dot-matrix type, black and white, one red accent).
+<h1 align="center">YTune</h1>
+
+<p align="center">A sideloadable Android music player for YouTube, styled after Nothing OS (dot-matrix type, black and white, one red accent).<br>
+<b><a href="https://github.com/kream0/ytune/releases/latest/download/ytune.apk">Download the latest APK</a></b> · Android 8.0+</p>
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/screenshots/player.webp" width="200" alt="Now playing: Wild World by Cat Stevens, photo cover, dot-matrix seek bar"></td>
+    <td align="center"><img src="docs/screenshots/search.webp" width="200" alt="Search results for cat stevens, with Play all and Queue all"></td>
+    <td align="center"><img src="docs/screenshots/playlist.webp" width="200" alt="A YouTube playlist opened like an album, with Play, Shuffle, queue and download"></td>
+    <td align="center"><img src="docs/screenshots/library.webp" width="200" alt="Library: saved songs with their green offline dot"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Player</sub></td>
+    <td align="center"><sub>Search</sub></td>
+    <td align="center"><sub>Playlist</sub></td>
+    <td align="center"><sub>Library</sub></td>
+  </tr>
+</table>
 
 - **Search** YouTube or YouTube Music: songs, videos, playlists, albums. Search suggestions work as you type. You can also paste a link, or share one from the YouTube app to YTune.
 - **Add whole playlists** straight from the search results with the `+` button, or open one to play, shuffle, queue, download or bookmark it.
@@ -28,6 +46,17 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
 - **Lyrics:** Spotify-style synced lyrics where the cover was. They scroll on their own, the line being sung fills in karaoke-style (word by word when the lyrics have word timing), sung lines stay lit and upcoming ones are dimmed. Scroll by hand to look around; it catches up again after a few seconds. Long-press a line to jump there. Lyrics come from [LRCLIB](https://lrclib.net), a free, open lyrics database. YouTube titles are cleaned up first ("Artist - Title (Official Video)" → artist + title), and synced lyrics are only used when their length matches the song, otherwise the plain text is shown ("NOT SYNCED"). Lyrics are cached, and songs you save fetch theirs in the background, so they work offline too.
 - **Headset and Nothing Ear controls:** playback runs in a Media3 `MediaSession`, so it works from Bluetooth media keys (play/pause, next, previous), the lock screen and the notification. It pauses when the earbuds disconnect or come out, and pressing play with the app closed resumes your last queue.
 
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/screenshots/playback-mode.webp" width="240" alt="Playback mode sheet: STREAM or STREAM + DL, Progressive or All at once"></td>
+    <td align="center"><img src="docs/screenshots/song-menu.webp" width="240" alt="Song menu: Play now, Add next in queue, Add to queue, Add to playlist, Go to album, Delete download"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Stream, or stream + download</sub></td>
+    <td align="center"><sub>The ⋯ menu: add next, add to playlist, go to album</sub></td>
+  </tr>
+</table>
+
 ## Glyph Matrix (Nothing Phone (3) / (4a) Pro)
 
 - **While music plays**, the back of the phone scrolls *title · artist* in a dot-matrix font (the same Doto dots as the app), with a progress bar underneath (and a small equalizer on the Phone (3)'s bigger matrix). It clears when you pause. Toggle it in *Settings → Glyph Matrix*, which also has a live on-screen preview.
@@ -36,6 +65,17 @@ A sideloadable Android music player for YouTube, styled after Nothing OS (dot-ma
 - **Test + status:** *Settings → Glyph Matrix → Test* scrolls a test message for 8 seconds. The lines under it show whether Nothing's Glyph service was found, connected and accepted YTune, and how many frames went out. If the matrix stays dark, that's where the reason shows up.
 - Non-Latin titles (CJK, Cyrillic, …) fall back to the system font squeezed onto the matrix; emoji are skipped.
 - The app targets Android 16 because Nothing's Glyph service only waives its API key for apps that do. Nothing's Glyph SDK is closed source and can't be redistributed, so it isn't in this repo: the build downloads it from [Nothing's Glyph-Developer-Kit](https://github.com/Nothing-Developer-Programme/Glyph-Developer-Kit) at a pinned commit and checks its SHA-256.
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/screenshots/glyph-matrix.webp" width="240" alt="Settings: live preview of the Glyph Matrix and its switches"></td>
+    <td align="center"><img src="docs/screenshots/settings-updates.webp" width="240" alt="Settings: matrix test and status lines, YTune up to date, auto-download updates"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Settings → Glyph Matrix, with its live preview</sub></td>
+    <td align="center"><sub>Matrix test + status, and updates</sub></td>
+  </tr>
+</table>
 
 ## Updates
 
