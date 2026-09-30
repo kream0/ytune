@@ -9,6 +9,9 @@ on:
   push:
     branches: ['**']
     tags: ['v*']
+    # The site (docs/) has its own workflow: a push that only changes it doesn't build an APK
+    # (nor cancel a release build in progress).
+    paths-ignore: ['docs/**', '.github/workflows/pages.yml']
   release:
     types: [published]
   workflow_dispatch:

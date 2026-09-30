@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YTune</title>
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="YTune">
+<meta property="og:description" content="Toute la musique de YouTube dans une vraie app de musique, façon Nothing. En streaming, ou enregistrée sur le téléphone.">
+<meta property="og:url" content="https://kream0.github.io/ytune/">
+<meta property="og:image" content="https://kream0.github.io/ytune/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<script>try{var t=localStorage.getItem("ytune-theme");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}</script>
+<meta name="description" content="YTune, le lecteur de musique pour Android façon Nothing : YouTube en streaming ou hors ligne, paroles synchronisées, Glyph Matrix.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+@font-face {
+  font-family: "Doto App";
+  src: url(data:font/woff;base64,d09GRgABAAAAABgwAA4AAAABjbQAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAABHREVGAAAX5AAAABYAAAAWABEAv09TLzIAABTgAAAAVQAAAGBgnPJRU1RBVAAAF/wAAAAxAAAAMsv5uldjbWFwAAAVOAAAAYsAAAIOjoePO2dhc3AAABfcAAAACAAAAAgAAAAQZ2x5ZgAAAUQAABFlAAGEliji4hdoZWFkAAAURAAAADYAAAA2KuKgqmhoZWEAABTAAAAAIAAAACQGEAVNaG10eAAAFHwAAABDAAABghCzC8dsb2NhAAASxAAAAYAAAAGA5hlING1heHAAABKsAAAAGAAAACAA1QFmbmFtZQAAFswAAAD4AAABxCbjRglwb3N0AAAXxAAAABYAAAAg/58AM3ByZXAAABbEAAAABwAAAAdoBoyFeJztXb2OHMcR7lnqeKb4cyTFswEqsWzAApxRlJwpsAw/wQlwJAg40AQucWg/goMDnBFwqtBPIMAZQUAQZFzCWK9gMBYE6Ly757sZ7n7T9d/dM7fJYDC/u1NfV1dXfVWV7qe9tNe9WXyd7qcP0kfpD+nz9Of01/T39M/0r/Tv9J/0ffpv+qk7SOnoya9uHh4++vnTpx/97pNPPv7Nr/c3DzzdPLC3eeADhyu23qI44PHDfnj4+PHDxWrz/Grvm6u9n15f7Xb/6I/+hTh6zNwjHzQ4uvj6cufh42f9rtvB/Ib/nJQecdHY/bJ70n3WHQFUKoS/dQWNbPoKj99R6Yf1yIbQew0OfgeGADpGYBmdtjx6CP1CyCcutD08PbwYITfe54yQlH5PwkOBl1lr9e6Lq+/9HOwRA6K2qr/xPgSVGyaD9f97EnR3n6lskh3gJWZMr2inifzpjQGhhqftnx3g3z7wYi4w7zffXhNs/2KHbS62e3jtjJci4N7ZLjvb5brbLoeyMdAddc/AOPDA326kjE0M3W8RGpEbZZLjxzZoGhxT78l8oiqPKD18yoyFSq/dOvCECdJ+hAxH1WviqPVJ3MFEOT8DwB4walK6yxgBLnEAGku0+1QBYfqXIrN+oCopTZzfDO/Jg9TqTSd32fBIB2nv/FNaK84cF/RbGkEOcqW3gyZ8+6W3gjfzNjzvlrmiuWlWe7S56TViUq2AbVrPegQnK71Fje2BMs6rXeLm14abNZhW6eGA2weYFnvgtqLjZZbvc4L5IFxOmACtQp50vs0V/Qr/c7O4rIT+3v+c95XtsB+L/UdSvzPHotlNBno3BeTBTnVkzGOM7OaHmgMiH4SfwiiYMvbL8MqbDWfM2d+T99bgfIzpuYAKPTKle6yRcs38QW35clr00aziMRwN2048ZusZHq+tEskbKC4IwNrxPS81lR7wZ3EVq2hOfB/6il6pSeg75Ug9dC6jBk6hZJ0RBs/tdLLE7ekobjU6URFwVhyw6rPnwk9NrZMECkq5iyV450KCmbVzTKZdJaEqcuC4ks4/xcwAN4v6LilpxDUKYW5XEr6FUx2Kgip4YIx8WntPR/jy3Ch/kfcbflpTFTl7ZCNVlzOSZPGhXXBAL62x/CqiljVGW+y0nPOFG7gixE4xpAaC7DHioN5LFbLC85j8PTzF5IIOuj3zej5vAow4UoNXaw7rMakGaGW1JXGxWzZIe6C9kcpCjvoaS7C+J8jDrTNtT1CPApQ7BlPLvuE/PdwRpLjQqngaRK0H0OnfEYJrK2qpPEgMVoGvPRi2AadH5ks7c0ShC685untLHoawBXUGayNewKRqehhYKmW2MtNXCnkZg56+R2NDoLEHgVYumxdeqXRmKxU780CG+jFfszJfx5JYpvfHuOzCuWSE3+daJFOqgFlGF5erb2lVxVXKQel08QO+hTzpuk9lIFqhqlMQVttGrUCLhsQ4JwzRYjUkPYHZb2LrRZZHY7N1Ieutr3ZTugmOh9KMEVjJrpJ7KST04OFdK+tMoDxXxHnCMXaMHkSeD/A+TOJ0QF1rD6fAnGYBtst4QobKZGzpyPyXMiD1+B1+qVQh1UXdEqsCnFokO2KtQc+/Cq3ZNGHtp7hla9VQPU4BTQ5uAYVmQhea06lGRbJm9WgwP7Cu6nVkEpbXzZqDsdaBAqJbik+hK1sMFOcheIxuqZIcq7myCq+9Uv6CQwL+d5lvRW4iEuwZ9p2W1R5SFaG9BUO/IUa3TU0IFgkBE4gKW4b5pRUDv4zl5ZnzXpJ/1A7r6IDnxVPxLlrBURjNYmDvVgeaJBRTBWn3WEjTzIYThlVIz/Fw8gMMNzejqRSRhlYAE0VlaIqSK6Aw1FBUepzRrIVWUBS1tt9NiHyc6bogVZJ+SE603Xrn8qnzHOt2bHS717wV7VDmFsXM7rlkJBglbMIJkXBbrlya7TRxYUWNp3BzhhiNEvAh3YYY/jorzxFI5mjKu1lcNIMIiW/TKl5iEyK8EV/kbcIeruUZ8pCg2asjl2K4WToWjSjKaKoUV/L4pfLY1AKIPr+3kL+jSgyLu7ny7nVv3OuM05HqZsNj7PRSLiVItRDu97o3GsCw71HcXT3zc8LoUmR+lofcyHSnqgQZCsQWcz4nDE5LzmczKG0ar4t0tvjiqsIpQztCfTHyz32ro1wv6MtzScsDHpuTDaL8gGVX6lYtCp9PGTKwu6lJeIvYUJNXKBGYnBXQVTtHeRZaDsGsDS03GeMzjimquCIky9JU0zxvQnLd41Q5PDRH9/eQPFE/vjj7HnMObhl0TFjL5Zcxk1t2G4FZbF5eofrFhj6MYQZqCHg6VZDSPvhXq9GqiXB5DJBewVoriQoCUuRXWkWJT5Zf6cg5Shxi3Cseqo0SE8Vi8/oAaiAS50f+Y1s3cuJzST2i+5VIMB7pgNZMaVvpFaJWZh7QfmnSAadJVvM0qqjMwoIzVVFRANPRhCMA1d6C1uQ/DlmRbl3RbP+FfMsXtq7ENp21pjzWu8ZlbqiyXtvdEIsM5G0pPsUBhxTYY/TXXHv1rL7S2fIrfaj5SiEHfsjIVLBx/krvrvsKjnIVt6Jw9Oyr8CPTt9Am4CAa2KMLzYHcdpEQrdS6UMCAoy4lZUPbTh7f1UO+3GAOOssVYVHRXN+O2Za6FfwR5anj8Ni6vhKUb/Ias2bP85NsJD2GyRHid9O1TnVf4qEH4oi3beHFvvCSrT8q5UK+MQXjP9xJtYDn86K20hdUUb27ae/8U4LzMmU50jq7gqRRLK+G9EcWHot0tsTE6fmPF2y/P5KfELL99vDDV96adSXSXMyF7a2pxJEq0zEqs0xlx4CRX0WetZx/ycDuPIJCtyHbhvERFC7Xb0sUno6g0AV5IfajGhMoIYh9B1+smPrEvymldy4kk15dSSb9zeFbIxsN6eFXAkVZpI9epZT5MrSA8paZsTODoCF1qWaRoacp+1EQe6GzBkIg1mz4vXsJvilEjWdzXXhX/qXTib4s547uxVueIxceIpeZJyFrLa3sk8XLPqeGnhlQrgcO3K6jUIjXFGNRSz4g1y1yDO4YmiFEGBptBrdYMtQrtaBV3OKxXOaal0R1AnSLIlFEMNQCNI3Eio3LUS9DZWmR+cXVGOxbYhOG4C1Me2pK3YlbQVdEd2J3yJnThEoBscUc9QmDM7QvcSmUNo3X2lnkEwZnQEdid0has8hL43BKvYjbw2Ev990ErgTiA75vup1+f82+1rG9X36J6/io4KZ+AQ9K6cYFatOX/0ctI/azdaDnPCNv/ZfET1i9/8ly5X6azQf1UJny6n/dqVxlpBn+o1UV17NR70rMfwuZNeUfTDG3UW4OtFH4V30tcAX7udLk4ZuHkxdlePvt2A5TblMGOY/chBkmDD9F9XQSZRLJt7P795g/wsibuUPqIY0HQEFg9Aid6ZgtVHdcBbWLkBZ/wGoIWyOirtD3mZ5TymSQ0uSJkvNSvwepsZpE0gV6pN/ixwZSFbGWfTu3RhcdAfKIGpfxHykL6CNVhWuNQD3IRTWss2+t0qVQiRyNSPL5nTViJZOZRlAFRxDUg1ar+xggQPUg/kIwln4dzTRs1ptZpjmJu/MSqk4UKsJXUkTcAb5jPZaO68uNith0JAdZ6WMFsdP+SHY54z2KGhHWHKl+j+hE4l4fYakRFkdsL2CIs4ce0vQVPTZGCqlQR+EIhAcFGaPGgw7y8fi2zq3UNN9cIsmS8nGrBNxszSSTrNEmpCKSqIFeBQI+hs/8okq3MnUnXBhuIRmBeYZ2fsOvqEO1zCZ34Se/qKJzOsKVcdE89YSwcBaHhHlilsztrGRQbYcy9eGjhJUnvgWILVqAl2NLX6GqFXFx2Yleqq6UZNhaT8EKrFfMyHsSKqr17qSTlfc0Fzn08LnTB0JWpls/bJCBKhcb6Vsn2l0EWRcCC1bXI5wWXhmnnsdr84sdiTcQDV2BX1CywomlmwTMmw2VmpNvQopu6rTzqFdUkQlHl86kD0D1Ke/T4uwWLZh52uwtGUXXf3eiRjvRPUBzeqDwVKmnoafXPOHFy43MlVY8OrjQAaEw0q3MWNDEBxS63gRWqidLvgkZnmp1HmaJX/kOqYFitE91j3Ed73CEKhGIW19Jo0xU3mOC8bDPQtreEIV7gHrg1+fWoEFzmtIypoxKhfQrlVMLuYLdkQYeLKnFQlrQROi7R7Kaf92Rj6+1lQ5yZV4rUaf5IqYBbetMz0G/0S+tpo3nlLIAW8neckwOjqB1RnPh7rHm52bqFZXBREQ1IitQomsXqOBzwLPuGq4xVAZQoRWEgpDVCsa0TLdZAyqg6k9MfnET+onKqJm0R90jc5VtBNka9MrbE1RwtbOta67t5MEJmaJm6qW4M522wePFYGiW+mVlv8LFdnYjr09tTgNVBcMxHu5d9F2z2zkeukLhVg9xP6HMK6w5iDy3PK7aayLPruFz2a+veMUMBWfNQ4toKmYQbDau3rC6+oyCvqwKyMkPL5Ud3koAxt3mHSgZftsOY3+a/O8wJoAXOj3Ea+HY35ysaHbsryHfkU3RBZvb97m1NRrmt4ToRboEUjBHhrqLeGm/Kcal0ZwesjwPpVHo7lnQfD6dZ4Ssez1sAnSamP3hhXk2ELftJz9CrYCz/4VWPsf+CN/fhVWuoJkTgUO0QbBwZpWPfiXaM+lRgERYkQRtSlQk0XMhyzT19KAre1jEvfQEXTZNBGiKmT+oO8hfofP1jZthsGLpb/bH/RxUSfdoKCdvLfxK8+dSl86WNsqH60oS2yNjUBzndPgdbo30OGRWawjxRuuK45p6IvYb3KTZRvR6S7sVXv9Mp5Orbrqq3dUVbCaz/LnM7GHWavFAX7zVgj0tXCPQGlbAu8Oy4rJv7vG9fN1gaIO+ro6vIilXzoZ/urnV0RhXcg9eynqtGAXrsp8tsfYCok1jPQe7/+lqb3lljCFlw47yW4bEeKwZulhJUh/d6LXAuHxnaa1u9Bj3YDbDZf8CfABJqYSEfq1Cd7B6DiClKqkPsPqtGysbRvcnv9/6SvBT0431d+07bGjmP6JRBilnaX5zmRgE/b/dggFo42fCjnz0kPyvMnybMmHzSeTcoJuMAXc6YFWqXZ8N917vLpUFpmg0unVLPBlEkz/oRevgu4M0jqN1z4mvQrvwePTY8Sgm7fHaSF23yF7Ir1id90gu0KuNGi02yKd55boe8Moe1XqYPfyGJnOX67VHqIFeJ+xhJj6zoLZfuk3YVi6rVcU39Tggr3m0QDLIS4g99PhCKRUB9RBLsyyrjFcS6WckUUfilLHJp1Ft2xR42h9BWAxfgz4wqAKYH5z8AeswEOMyXkP6YJYOBaBBp+mUiSTJpyCG9M+0Rhw03VNDouse8SJJjAONXiRzhB20EdQ/1iy7rEGmdS7Iuto1sm/pXBAPETfLnTdRnBdA2mjPgVnP9RDANaLAntcAzM1fNZzXIqsNhqgkhe+pTuNepP6IpOu6fXkjOHeVq1mGOARCmG4a93u/yWdQ5j0TBIr9WDAq/BHwUvnEK9WO9GDG4VLGymKRCpJbSDs9vjaJq4w2YUxApsNgGVYFKMo2M7HwCa2NVsn2DoFUvjaaq53tCK5WYObmK5oTpBD3sTqQdG3KiqAnoILVLNDTi3E3xQH07F1wB85/HGYz/SlixSJfEe/lfzv8P94dRzx6ktBXSMx0blHrAZ8+uKd1vVWVR7xRcYtuVaXpXYSEbRWn7fSupw94UHxPH0vuX7OzNM3N8nXFhpuHfN2N5rsaA1vlpF0zDvN9Wt9iHLbiX5kOZj19NOWBXKWbqB+8hehuZV0+HXR7ru3rorvfGJdx5XT3AY8tXm21VKkwhPuaLN/yLb+XJ7Y41jBVxNBo7ttdRo3TZvgBIXCT+zq4hEXu8/iVRgWStURcbXy2VlzdNOLCQyF5XWOuhm48mP4HcqkaRAAAAHicY2BkYGDYz5jKIMoAAowMaAAAIE8BPQAAAAABRwLYBEcFyQc3CKUKJwvRDVIOXA+OEPwSZhPlFWMW9RhzGggbJBxWHbIekx+IIJAhhCJ5I1skeiVbJrYoEimVKt0sWy2jLv4wRTGMMzU0pDXWN0U4sznlOsY74z0YPk0/bUChQdVC4ERORVpGKUcNSDxJWEqdS/VMJE1oTpdP21D3UmNSzlNhVGtV2FdEWIpZHVmwWn5bS1wsXQ1eAF7iX+xgG2FeYitigWQCZUlln2XNZl5njmiqae9rR2yLbc9vKm9rb9RwPXEIck5yzXNMdEF1rXbKeDd5fnmtekB7EHvgfP99aH4hfu5/z4CcgWmCYINrhDiEy4XohlGHDIgDiTSKe4wNjQSOI49VkHORopLBk8mU5ZXalzKYeJm+m2Ob9pyJnbueJJ4/nvigPqD4obKiL6LVo3uj0qQopH6kwaV7pxCoBKlwqimrCqw7rM6szq3rruCwOrFqspqzkbSxteS3A7giuIq4irlFuju69rw9vay/G8BMwVPCSwABAAAAAQAA/LTknl8PPPUAAgPoAAAAAOKbCaAAAAAA5tlTzwAF/tQCUwOEAAAABgACAAAAAAAAeJxj/MJgxBTBwEo0zIRD4vXghmfxyKDadBZqNysSjUvnWTRzMN2eSdAUVHmYjrNIIjC7zmKIsjIw4DATizgALr4ZfgB4nGNgZGBg3vafjYGBKYKBlYGVKZj5BQMqYAIAVNoDZnicY2BhimBuYWBlYGDqYtrDwMDQA6EZHzAYMjJxcDFxc3EyMTFzMLE3MDCwMyABAwM3Y4YDDAoKaszb/rMxMDC3MOoAhRlBcoxfwGYpMDAAAFZEDDYAAAB4nEXRx3OOURgF8N/Lp3cJIhJeQdToXYbo3ZDo3eg9otdoQfTeVnqL3svgH7H4lsbCWNt8brKIe+eeM3PnzJznOQc1UDO89IBRFSeiv4HjcBOBD7jrvgovvfXRF6moKE6PM+PsOCfOTaWqlLeC4qHnQfHeZ9+jwjgtzoizqhW0qoRUueqTLEuWJvOS+cEz9qPyw8+Av/z2JyqOSv4rPbbaTUcscMnI4HXBRWNdNctWlz3yzcng/cx668IUDyxzyMww0T4rbXbduOBRT30NNZIW9muhpTayZGurnfa66qa7HvL00t8AAw0yxFQTTTM67LTJUBNMN8dCa21QYpvd9thrv4OOOuea2yGlCi/C/h9CSp98NdkkU4zxzhpFnrhnntlOKXYnZDrXeVcUOm2LG2qH7BPqqqVO6KOBZhproqnMkFuG1pqHjHJ10FEXnZTqrJ/e+uhrsJ42KjBMvvGGG2WEGZZaZLEldtluh51WOaxcmWPOOm6+M96EPl95Hdp6GjrNccIKy/8BGiRjgQC4Af+FsASNAHicbZBNTgJBEIW/FjRxYkw0rFyYWaIJiuAKVoJxbYzRtSIZ5K/JzGDChtNwCE/AeTgCj57G9MJ0quur6nr1kgYilpQw5WNgpSjYUFFV8AGn/Houcc3aczmYOeSCjecjKibyfEZkLgs2cG6qng0npkUXy4wFKd8kDMiJaVBX3FP7o5hXvfWVHzWfK2KepbEM1e051QNz5YF6KZnqqtuWa3tGi1udRB67iTmf3EhlmahrGav/oz2p6MPFVP2901Xg2XGvPUa8aD7Rpl2dcqd9dXfa7n6iKdrraoHuzflkcrRyiQPlf9Ohn5XblC9FX/qMd2X/Z1vflT8beJxjYGYAg/9zGIyAFCMDGgAAKpQB0gAAAAEAAf//AA8AAQAAAAwAAAAAAAAAAgABAAEAvgABAAB4nGNgZGBk4GBgYmBgEAGyGBhUGJiC/P1cQMzy9IwSRpA8EwMjWE6QuYWBAQBSdgPVAAAA) format("woff");
+  font-weight: 900;
+  font-display: swap;
+}
+
+/* Layout: a Nothing OS spec sheet. Black ground, dot-matrix type, one signal red;
+   a phone back with the live Glyph Matrix anchors the hero, the app's own screens follow. */
+:root {
+  --bg: #000000;
+  --surface: #0D0D0D;
+  --surface-2: #1A1A1A;
+  --line: #2B2B2B;
+  --fg: #FFFFFF;
+  --dim: #9B9B9B;
+  --faint: #5A5A5A;
+  --dot-off: #262626;
+  --red: #D71921;
+  --on-red: #FFFFFF;
+  --inv: #FFFFFF;
+  --on-inv: #000000;
+  --s-orange: #F26B1D;
+  --s-yellow: #F5C518;
+  --s-green: #35D07F;
+  --shadow: rgba(0, 0, 0, 0.6);
+  /* Hardware stays dark in both themes, like the phone itself. */
+  --device: #0A0A0A;
+  --device-2: #141414;
+  --device-rim: #2A2A2A;
+  --device-ink: #6B6B6B;
+  --glyph-off: #1C1C1C;
+  --glyph-on: #FFFFFF;
+  --grain: none;
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .27 0 0 0 0 .12 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --qr-bg: #FFFFFF;
+  --qr-fg: #000000;
+
+  --gutter: clamp(16px, 4vw, 44px);
+  --f-dot: "Doto App", "Doto", ui-monospace, monospace;
+  --f-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "Space Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #EEE8DA; --surface: #F7F3EA; --surface-2: #E3DCCB; --line: #D2C8B4;
+    --fg: #1C1A16; --dim: #6A6252; --faint: #A0957F; --dot-off: #D8CFBC;
+    --inv: #1C1A16; --on-inv: #F7F3EA;
+    --s-orange: #D9580B; --s-yellow: #B98B00; --s-green: #1E8A4C;
+    --shadow: rgba(70, 52, 20, 0.16);
+    --grain: var(--paper-grain);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #EEE8DA; --surface: #F7F3EA; --surface-2: #E3DCCB; --line: #D2C8B4;
+  --fg: #1C1A16; --dim: #6A6252; --faint: #A0957F; --dot-off: #D8CFBC;
+  --inv: #1C1A16; --on-inv: #F7F3EA;
+  --s-orange: #D9580B; --s-yellow: #B98B00; --s-green: #1E8A4C;
+  --shadow: rgba(70, 52, 20, 0.16);
+  --grain: var(--paper-grain);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--grain), var(--bg);
+  color: var(--fg);
+  font-family: var(--f-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  padding-inline: var(--gutter);
+  padding-block: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1180px; margin-inline: auto; }
+
+/* ---------- type ---------- */
+.label {
+  font-family: var(--f-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.label.red { color: var(--red); font-weight: 700; }
+.dotmark { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--red); vertical-align: 0.1em; margin-right: 10px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h2 {
+  font-family: var(--f-sans);
+  font-weight: 700;
+  font-size: clamp(30px, 4.4vw, 50px);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+h2 .dots { font-family: var(--f-dot); font-weight: 900; letter-spacing: 0.02em; }
+p { margin: 0; }
+.lede { color: var(--dim); max-width: 60ch; font-size: 17px; }
+
+/* ---------- top bar ---------- */
+.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-block: 22px;
+}
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand svg { width: 34px; height: 34px; }
+.brand b { font-family: var(--f-dot); font-weight: 900; font-size: 24px; letter-spacing: 0.08em; }
+.top nav { display: flex; align-items: center; gap: 22px; }
+.top nav a { text-decoration: none; }
+.top nav a:hover { color: var(--fg); }
+.top nav .label { transition: color .2s; }
+.mode {
+  display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 99px;
+}
+.mode button {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; font-weight: 700;
+  border: 0; border-radius: 99px; padding: 7px 12px; cursor: pointer;
+  background: transparent; color: var(--dim);
+}
+.mode button[aria-pressed="true"] { background: var(--inv); color: var(--on-inv); }
+
+/* ---------- hero ---------- */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: center;
+  padding-block: clamp(24px, 6vw, 72px) clamp(56px, 8vw, 110px);
+  position: relative;
+}
+.hero-copy { display: grid; gap: 26px; min-width: 0; }
+.hero h1 {
+  font-family: var(--f-dot);
+  font-weight: 900;
+  font-size: clamp(84px, 15vw, 184px);
+  line-height: 0.86;
+  letter-spacing: 0.03em;
+  margin-left: -0.04em;
+  position: relative;
+  width: fit-content;
+}
+.hero h1 .pip {
+  position: absolute; right: -0.28em; top: 0.02em;
+  width: 0.13em; height: 0.13em; border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0.25em rgba(215, 25, 33, 0.55);
+  animation: pip 2.4s ease-in-out infinite;
+}
+@keyframes pip { 50% { opacity: .35; } }
+.hero .claim {
+  font-size: clamp(21px, 2.3vw, 28px);
+  line-height: 1.3;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  max-width: 26ch;
+}
+.hero .claim em { font-style: normal; color: var(--dim); }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  min-height: 58px; padding: 0 26px 0 20px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-family: var(--f-mono); font-weight: 700; font-size: 16px; letter-spacing: .02em;
+  transition: transform .15s ease, background .2s, box-shadow .2s;
+}
+.btn { white-space: nowrap; }
+.btn:active { transform: scale(0.97); }
+.btn-dl { background: var(--red); color: var(--on-red); box-shadow: 0 10px 34px rgba(215, 25, 33, 0.28); }
+.btn-dl:hover { box-shadow: 0 12px 44px rgba(215, 25, 33, 0.45); }
+.btn-dl .play { width: 30px; height: 30px; border-radius: 50%; background: var(--on-red); display: grid; place-items: center; }
+.btn-dl .play svg { width: 13px; height: 13px; margin-left: 2px; }
+.btn-dl small { font-family: var(--f-mono); font-weight: 400; font-size: 11px; letter-spacing: .1em; opacity: .8; }
+.btn-ghost { border: 1px solid var(--line); color: var(--fg); padding: 0 22px; font-size: 14px; }
+.btn-ghost:hover { border-color: var(--dim); }
+.specs { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: 0; list-style: none; }
+.specs li { display: flex; align-items: center; gap: 8px; }
+.specs li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--faint); }
+
+/* the phone back */
+.stage { display: grid; justify-items: center; gap: 18px; min-width: 0; }
+.device {
+  aspect-ratio: 0.5;
+  border-radius: 54px;
+  background:
+    radial-gradient(120% 60% at 30% 0%, var(--device-2), transparent 60%),
+    var(--device);
+  border: 1px solid var(--device-rim);
+  box-shadow:
+    inset 0 0 0 6px var(--device),
+    inset 0 0 0 7px var(--device-rim),
+    0 40px 90px var(--shadow);
+  overflow: hidden;
+}
+/* Nothing's see-through back: hairline hardware under the glass */
+.device .hw { position: absolute; border: 1px solid var(--device-rim); border-radius: 10px; }
+.device .hw.a { left: 11%; top: 57%; width: 34%; height: 16%; }
+.device .hw.b { left: 50%; top: 61%; width: 39%; height: 8%; border-radius: 6px; }
+.device .hw.c { left: 11%; top: 77%; width: 78%; height: 11%; border-radius: 16px; }
+.device .hw.c::before, .device .hw.c::after { content: ""; position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--device-rim); transform: translateY(-50%); }
+.device .hw.c::before { left: 14px; } .device .hw.c::after { right: 14px; }
+.device .lens {
+  position: absolute; left: 11%; top: 6.5%;
+  width: 26%; aspect-ratio: 0.52; border-radius: 40px;
+  border: 1px solid var(--device-rim);
+  display: grid; align-content: space-evenly; justify-items: center;
+}
+.device .lens i { width: 58%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2a2a2a, #050505 62%); border: 1px solid var(--device-rim); }
+.device .matrix-btn {
+  position: absolute; right: 9%; top: 6.5%;
+  width: 52%; aspect-ratio: 1; padding: 0;
+  border: 0; background: transparent; cursor: pointer; border-radius: 50%;
+}
+.device .matrix-btn canvas { width: 100%; height: 100%; display: block; }
+.device .stamp {
+  position: absolute; left: 11%; bottom: 6%;
+  font-family: var(--f-mono); font-size: 9px; letter-spacing: .18em; color: var(--device-ink);
+}
+.stage .label { text-align: center; max-width: 36ch; line-height: 1.7; }
+
+/* ---------- sections ---------- */
+section { padding-block: clamp(56px, 9vw, 120px); border-top: 1px solid var(--line); }
+.head { display: grid; gap: 16px; margin-bottom: clamp(32px, 5vw, 56px); }
+.head.split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 24px 48px; }
+.swipe { display: none; align-items: center; gap: 10px; margin-top: -8px; }
+.swipe i { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+.swipe i:first-child { background: var(--red); }
+
+/* ---------- screens ---------- */
+.shots {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(20px, 2.6vw, 36px);
+  align-items: start;
+}
+.shot { display: grid; gap: 18px; min-width: 0; }
+.shot:nth-child(even) { margin-top: 64px; }
+.shot figcaption { display: grid; gap: 6px; }
+.shot figcaption p { color: var(--dim); font-size: 15px; }
+figure { margin: 0; }
+.phone {
+  position: relative;
+  aspect-ratio: 840 / 1768;
+  border-radius: 30px;
+  background: var(--device);
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 5px var(--surface), 0 0 0 6px var(--line), 0 28px 60px var(--shadow);
+  overflow: hidden;
+  transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s;
+}
+.phone img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shot:hover .phone { transform: translateY(-6px); box-shadow: 0 0 0 5px var(--surface), 0 0 0 6px var(--dim), 0 38px 70px var(--shadow); }
+/* the eighth cell: the download, shaped like a phone */
+.tile {
+  text-decoration: none; display: grid; align-content: center; justify-items: center; gap: 18px;
+  padding: 12% 10%; text-align: center; background: var(--surface);
+}
+.tile svg { width: 38%; }
+.tile b { font-family: var(--f-dot); font-weight: 900; font-size: clamp(26px, 2.6vw, 34px); letter-spacing: .08em; line-height: 1; }
+.tile p { color: var(--dim); font-size: 14px; max-width: 18ch; }
+.tile .btn { min-height: 48px; padding: 0 20px 0 14px; font-size: 14px; gap: 10px; }
+.tile .btn .play { width: 26px; height: 26px; }
+
+/* ---------- hero pair: phone back (Glyph Matrix) + the app ---------- */
+.duo { position: relative; width: min(560px, 100%); aspect-ratio: 1 / 1.24; }
+.duo .device { position: absolute; left: 0; top: 0; width: 56%; }
+.duo .front {
+  position: absolute; right: 0; top: 18%; width: 48%;
+  border-radius: 34px; z-index: 2;
+  box-shadow: 0 0 0 5px var(--device), 0 0 0 6px var(--device-rim), 0 40px 80px var(--shadow);
+}
+
+/* ---------- offline scale ---------- */
+.offline { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 72px); align-items: center; }
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 28px;
+  padding: clamp(22px, 3.2vw, 36px); display: grid; gap: 22px; min-width: 0;
+}
+.panel .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.panel .song strong { display: block; font-size: 20px; }
+.panel .song small { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; color: var(--dim); }
+.big-seek { width: 100%; height: 34px; display: block; }
+.big-times { display: flex; justify-content: space-between; font-family: var(--f-dot); font-weight: 900; font-size: 26px; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.big-times span:last-child { color: var(--dim); }
+.big-chip {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; font-weight: 700;
+  padding: 8px 16px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap;
+  transition: color .3s;
+  font-variant-numeric: tabular-nums;
+}
+.scale { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 0; margin: 0; list-style: none; }
+.scale li { display: grid; gap: 8px; }
+.scale li i { height: 6px; border-radius: 99px; }
+.scale li span { font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; color: var(--dim); text-transform: uppercase; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips span { font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); color: var(--dim); }
+.offline .copy { display: grid; gap: 20px; }
+
+/* ---------- features ---------- */
+.feats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(28px, 5vw, 72px); }
+.feat { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 18px; padding-block: 26px; border-top: 1px solid var(--line); }
+.feat canvas { width: 56px; height: 56px; }
+.feat h3 { font-size: 21px; line-height: 1.25; margin-bottom: 8px; letter-spacing: -0.01em; }
+.feat p { color: var(--dim); font-size: 15.5px; }
+.feat code { font-family: var(--f-mono); font-size: .86em; color: var(--fg); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
+
+/* ---------- install ---------- */
+.install { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: clamp(28px, 5vw, 72px); align-items: start; }
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; }
+.steps li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 16px; padding-block: 22px; border-top: 1px solid var(--line); }
+.steps li:last-child { border-bottom: 1px solid var(--line); }
+.steps .num { font-family: var(--f-dot); font-weight: 900; font-size: 58px; line-height: .9; color: var(--red); }
+.steps h3 { font-size: 21px; margin-bottom: 6px; }
+.steps p { color: var(--dim); font-size: 15.5px; }
+.qr-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 28px;
+  padding: 28px; display: grid; gap: 18px; justify-items: center; text-align: center; min-width: 0;
+}
+.qr-tile { background: var(--qr-bg); border-radius: 20px; padding: 16px; width: min(260px, 100%); }
+.qr-tile canvas { width: 100%; aspect-ratio: 1; display: block; }
+.link-row { display: flex; align-items: stretch; width: 100%; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.link-row code {
+  flex: 1; min-width: 0; font-family: var(--f-mono); font-size: 12px; padding: 12px 14px; text-align: left;
+  overflow-x: auto; white-space: nowrap; user-select: all; color: var(--dim);
+}
+.link-row button {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; font-weight: 700;
+  border: 0; border-left: 1px solid var(--line); background: var(--surface-2); color: var(--fg);
+  padding: 0 16px; cursor: pointer; min-width: 88px;
+}
+.link-row button:hover { color: var(--red); }
+.install .cta { margin-top: 28px; }
+
+/* ---------- footer ---------- */
+footer { border-top: 1px solid var(--line); padding-block: 40px 56px; display: grid; gap: 20px; }
+footer .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: center; }
+footer p { color: var(--faint); font-size: 14px; max-width: 70ch; }
+footer a { color: var(--dim); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1020px) {
+  .shots { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 640px; margin-inline: auto; }
+  .shot:nth-child(even) { margin-top: 48px; }
+}
+@media (max-width: 900px) {
+  .hero, .offline, .install { grid-template-columns: minmax(0, 1fr); }
+  .head.split { grid-template-columns: minmax(0, 1fr); }
+  .feats { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  /* a swipeable strip, bleeding to the screen edges */
+  .shots {
+    display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 18px;
+    margin-inline: calc(-1 * var(--gutter)); padding-inline: var(--gutter); padding-block: 8px 24px;
+    scroll-padding-inline: var(--gutter); max-width: none; scrollbar-width: none;
+  }
+  .shots::-webkit-scrollbar { display: none; }
+  .shot { flex: 0 0 68%; scroll-snap-align: start; }
+  .shot:nth-child(even) { margin-top: 0; }
+  .swipe { display: flex; }
+}
+@media (max-width: 560px) {
+  .top nav .hide-s { display: none; }
+  .top { gap: 10px; }
+  .brand b { font-size: 20px; }
+  .phone { border-radius: 24px; }
+  .duo .front { border-radius: 22px; }
+  .device { border-radius: 34px; }
+  .qr-card .qr-tile { display: none; }
+  .scale { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .steps li { grid-template-columns: 52px minmax(0, 1fr); }
+  .steps .num { font-size: 44px; }
+  .btn { width: 100%; justify-content: center; }
+  .btn-dl small { display: none; }
+  .hero h1 .pip { right: -0.2em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+<style>
+html, body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#top" aria-label="YTune">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="31.5" fill="var(--device)" stroke="var(--device-rim)"/>
+        <g fill="#FFFFFF">
+          <circle cx="20" cy="20" r="1.9"/>
+          <circle cx="20" cy="25.2" r="1.9"/><circle cx="25.2" cy="25.2" r="1.9"/><circle cx="30.4" cy="25.2" r="1.9"/>
+          <circle cx="20" cy="30.4" r="1.9"/><circle cx="25.2" cy="30.4" r="1.9"/><circle cx="30.4" cy="30.4" r="1.9"/><circle cx="35.6" cy="30.4" r="1.9"/><circle cx="40.8" cy="30.4" r="1.9"/>
+          <circle cx="20" cy="35.6" r="1.9"/><circle cx="25.2" cy="35.6" r="1.9"/><circle cx="30.4" cy="35.6" r="1.9"/><circle cx="35.6" cy="35.6" r="1.9"/><circle cx="40.8" cy="35.6" r="1.9"/><circle cx="46" cy="35.6" r="1.9"/><circle cx="51.2" cy="35.6" r="1.9"/>
+          <circle cx="20" cy="40.8" r="1.9"/><circle cx="25.2" cy="40.8" r="1.9"/><circle cx="30.4" cy="40.8" r="1.9"/><circle cx="35.6" cy="40.8" r="1.9"/><circle cx="40.8" cy="40.8" r="1.9"/>
+          <circle cx="20" cy="46" r="1.9"/><circle cx="25.2" cy="46" r="1.9"/><circle cx="30.4" cy="46" r="1.9"/>
+          <circle cx="20" cy="51.2" r="1.9"/>
+        </g>
+        <circle cx="55.6" cy="20" r="2.5" fill="#D71921"/>
+      </svg>
+      <b>YTUNE</b>
+    </a>
+    <nav>
+      <a class="label hide-s" href="#ecrans">Écrans</a>
+      <a class="label hide-s" href="#installer">Installer</a>
+      <a class="label hide-s" href="https://github.com/kream0/ytune" target="_blank" rel="noopener">GitHub ↗</a>
+      <div class="mode" role="group" aria-label="Thème">
+        <button type="button" data-mode="dark" aria-pressed="false">SOMBRE</button>
+        <button type="button" data-mode="light" aria-pressed="false">PAPIER</button>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <div class="hero-copy">
+        <p class="label"><span class="dotmark"></span>Lecteur de musique pour Android</p>
+        <h1>YTUNE<span class="pip" aria-hidden="true"></span></h1>
+        <p class="claim">Toute la musique de YouTube, dans une vraie app de musique. <em>En streaming, ou enregistrée sur le téléphone.</em></p>
+        <div class="cta">
+          <a class="btn btn-dl" href="https://github.com/kream0/ytune/releases/latest/download/ytune.apk" target="_blank" rel="noopener">
+            <span class="play"><svg viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12z" fill="var(--red)"/></svg></span>
+            Télécharger l'APK
+            <small>ANDROID 8+</small>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/kream0/ytune/releases/latest" target="_blank" rel="noopener">Notes de version ↗</a>
+        </div>
+        <ul class="specs label">
+          <li>Sans compte</li>
+          <li>Sans pub</li>
+          <li>Hors ligne</li>
+          <li>Mises à jour intégrées</li>
+        </ul>
+      </div>
+
+      <div class="stage">
+        <div class="duo">
+          <div class="device">
+            <div class="lens" aria-hidden="true"><i></i><i></i></div>
+            <button class="matrix-btn" id="matrix-btn" type="button" aria-pressed="true" aria-label="Glyph Matrix : lecture en cours. Touchez pour mettre en pause.">
+              <canvas id="matrix" width="600" height="600"></canvas>
+            </button>
+            <span class="hw a" aria-hidden="true"></span>
+            <span class="hw b" aria-hidden="true"></span>
+            <span class="hw c" aria-hidden="true"></span>
+            <span class="stamp" aria-hidden="true">YTUNE · NOW PLAYING</span>
+          </div>
+          <div class="phone front">
+            <img src="screenshots/player.webp" width="840" height="1768" alt="Écran de lecture de YTune : Wild World de Cat Stevens, pochette en photo, barre de lecture à points, bouton pause.">
+          </div>
+        </div>
+        <p class="label">Au dos, la Glyph Matrix des Nothing Phone (3) et (4a) Pro<br>fait défiler le titre. Touchez-la.</p>
+      </div>
+    </div>
+
+    <section id="ecrans">
+      <div class="head split">
+        <div style="display:grid;gap:16px">
+          <p class="label red">À l'écran</p>
+          <h2>Pensée comme un <span class="dots">NOTHING</span>.</h2>
+        </div>
+        <p class="lede">Noir profond, un seul rouge, des points partout. Touchez la pochette pour passer de la trame de points à la photo, puis aux paroles synchronisées.</p>
+      </div>
+
+      <div class="shots">
+        <figure class="shot">
+          <div class="phone"><img src="screenshots/search.webp" width="840" height="1768" loading="lazy" alt="Recherche « cat stevens » dans l'onglet Songs, avec les boutons Play all et Queue all."></div>
+          <figcaption><span class="label">Recherche</span><p>Morceaux, vidéos, playlists, albums. Tout lire ou tout mettre en file d'un geste.</p></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="phone"><img src="screenshots/playback-mode.webp" width="840" height="1768" loading="lazy" alt="Panneau Playback mode : STREAM ou STREAM + DL, stratégie Progressive ou All at once."></div>
+          <figcaption><span class="label">Stream ou Stream + DL</span><p>Streaming seul, ou enregistrement au fil de l'écoute ou d'un coup.</p></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="phone"><img src="screenshots/song-menu.webp" width="840" height="1768" loading="lazy" alt="Menu d'un morceau dans la file : Play now, Add next in queue, Add to queue, Add to playlist, Go to album."></div>
+          <figcaption><span class="label">Le menu ⋯</span><p>Lire maintenant, ajouter juste après, dans une playlist, aller à l'album.</p></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="phone"><img src="screenshots/playlist.webp" width="840" height="1768" loading="lazy" alt="Playlist The Very Best Of Cat Stevens : 20 titres, boutons Play et Shuffle, mini-lecteur en bas."></div>
+          <figcaption><span class="label">Playlists et albums</span><p>Une playlist YouTube s'ouvre comme un album : lecture, aléatoire, file, téléchargement.</p></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="phone"><img src="screenshots/library.webp" width="840" height="1768" loading="lazy" alt="Bibliothèque : deux morceaux enregistrés avec leur point vert, onglets Songs, Playlists et Queue."></div>
+          <figcaption><span class="label">Bibliothèque</span><p>Les morceaux enregistrés portent un point vert et marchent sans réseau.</p></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="phone"><img src="screenshots/glyph-matrix.webp" width="840" height="1768" loading="lazy" alt="Réglages : Wi-Fi only, téléchargements parallèles, cache, et aperçu de la Glyph Matrix."></div>
+          <figcaption><span class="label">Glyph Matrix</span><p>Aperçu en direct de ce qu'affiche le dos du téléphone.</p></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="phone"><img src="screenshots/settings-updates.webp" width="840" height="1768" loading="lazy" alt="Réglages : test de la matrice, YTune v1.4.5 à jour, commandes des écouteurs Nothing Ear."></div>
+          <figcaption><span class="label">Mises à jour</span><p>YTune suit les versions publiées et se met à jour lui-même.</p></figcaption>
+        </figure>
+        <figure class="shot">
+          <a class="phone tile" href="https://github.com/kream0/ytune/releases/latest/download/ytune.apk" target="_blank" rel="noopener">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="32" r="31.5" fill="var(--device)" stroke="var(--device-rim)"/>
+        <g fill="#FFFFFF">
+          <circle cx="20" cy="20" r="1.9"/>
+          <circle cx="20" cy="25.2" r="1.9"/><circle cx="25.2" cy="25.2" r="1.9"/><circle cx="30.4" cy="25.2" r="1.9"/>
+          <circle cx="20" cy="30.4" r="1.9"/><circle cx="25.2" cy="30.4" r="1.9"/><circle cx="30.4" cy="30.4" r="1.9"/><circle cx="35.6" cy="30.4" r="1.9"/><circle cx="40.8" cy="30.4" r="1.9"/>
+          <circle cx="20" cy="35.6" r="1.9"/><circle cx="25.2" cy="35.6" r="1.9"/><circle cx="30.4" cy="35.6" r="1.9"/><circle cx="35.6" cy="35.6" r="1.9"/><circle cx="40.8" cy="35.6" r="1.9"/><circle cx="46" cy="35.6" r="1.9"/><circle cx="51.2" cy="35.6" r="1.9"/>
+          <circle cx="20" cy="40.8" r="1.9"/><circle cx="25.2" cy="40.8" r="1.9"/><circle cx="30.4" cy="40.8" r="1.9"/><circle cx="35.6" cy="40.8" r="1.9"/><circle cx="40.8" cy="40.8" r="1.9"/>
+          <circle cx="20" cy="46" r="1.9"/><circle cx="25.2" cy="46" r="1.9"/><circle cx="30.4" cy="46" r="1.9"/>
+          <circle cx="20" cy="51.2" r="1.9"/>
+        </g>
+        <circle cx="55.6" cy="20" r="2.5" fill="#D71921"/>
+      </svg>
+            <b>YTUNE</b>
+            <p>Un seul APK, gratuit, pour Android 8.0 et plus.</p>
+            <span class="btn btn-dl"><span class="play"><svg viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12z" fill="var(--red)"/></svg></span>Télécharger</span>
+          </a>
+          <figcaption><span class="label">Dernière version</span><p>Le lien suit toujours la dernière version publiée.</p></figcaption>
+        </figure>
+      </div>
+      <div class="swipe label" aria-hidden="true"><i></i><i></i><i></i> Faites glisser</div>
+    </section>
+
+    <section id="hors-ligne">
+      <div class="offline">
+        <div class="copy">
+          <p class="label red">Hors ligne</p>
+          <h2>Du rouge au vert, d'un coup d'œil.</h2>
+          <p class="lede">Une seule échelle partout dans l'app. Rouge&nbsp;: pas encore sur le téléphone. Vert&nbsp;: enregistré, joué depuis le fichier. Pendant l'enregistrement, les points devant la tête de lecture se remplissent, et le morceau démarre après quelques secondes d'audio, sans attendre la fin.</p>
+          <div class="chips" aria-label="États affichés par le lecteur">
+            <span>STREAMING · SAVE</span><span>QUEUED</span><span>SAVING 42%</span><span>WAITING FOR WI-FI</span><span>FAILED · RETRY</span><span>OFFLINE</span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="row">
+            <div class="song"><strong>Around the World</strong><small>DAFT PUNK</small></div>
+            <span class="big-chip" id="save-chip" aria-live="off">STREAMING · SAVE</span>
+          </div>
+          <canvas class="big-seek" id="save-bar" width="1200" height="68"></canvas>
+          <div class="big-times"><span id="save-pos">0:00</span><span>7:09</span></div>
+          <ul class="scale">
+            <li><i style="background:var(--red)"></i><span>Pas enregistré</span></li>
+            <li><i style="background:var(--s-orange)"></i><span>En cours</span></li>
+            <li><i style="background:var(--s-yellow)"></i><span>Presque</span></li>
+            <li><i style="background:var(--s-green)"></i><span>Sur le téléphone</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="fonctions">
+      <div class="head">
+        <p class="label red">Ce que fait YTune</p>
+        <h2>Écouter, garder, retrouver.</h2>
+      </div>
+      <div class="feats">
+        <article class="feat"><canvas data-icon="search" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Tout YouTube et YouTube Music</h3>
+          <p>Morceaux, vidéos, playlists et albums, avec suggestions pendant la frappe. Collez un lien, ou partagez-le depuis l'app YouTube.</p></div></article>
+        <article class="feat"><canvas data-icon="save" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Streaming, ou streaming + enregistrement</h3>
+          <p>Le bouton <code>STREAM / STREAM + DL</code> choisit. Enregistre les prochains morceaux au fil de l'écoute, ou toute une playlist d'un coup.</p></div></article>
+        <article class="feat"><canvas data-icon="lyrics" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Paroles synchronisées</h3>
+          <p>Elles défilent seules, la ligne chantée se remplit. Elles viennent de LRCLIB, une base libre, et restent disponibles hors ligne.</p></div></article>
+        <article class="feat"><canvas data-icon="auto" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Autoplay des suggestions</h3>
+          <p>Quand la file se termine, YTune ajoute les suggestions YouTube du morceau en cours, dix à la fois, sans doublons ni vidéos trop longues.</p></div></article>
+        <article class="feat"><canvas data-icon="queue" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Une file d'attente qui obéit</h3>
+          <p>Glisser-déposer, «&nbsp;Ajouter ensuite&nbsp;» pour passer juste après le morceau en cours, et jamais deux fois la même chanson.</p></div></article>
+        <article class="feat"><canvas data-icon="album" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Aller à l'album</h3>
+          <p>Comme sur Spotify. L'album vient de YouTube Music ou du catalogue iTunes, et les versions au bon nombre de titres passent en premier.</p></div></article>
+        <article class="feat"><canvas data-icon="list" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Vos playlists, sélection multiple</h3>
+          <p>Créez vos playlists, enregistrez la file en une playlist. Appui long pour sélectionner plusieurs morceaux et tout faire en une fois.</p></div></article>
+        <article class="feat"><canvas data-icon="ear" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Nothing Ear et casques</h3>
+          <p>Commandes Bluetooth, écran verrouillé, notification. La lecture se met en pause quand vous retirez les écouteurs.</p></div></article>
+        <article class="feat"><canvas data-icon="glyph" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Glyph Matrix</h3>
+          <p>Sur Nothing Phone (3) et (4a) Pro, titre et artiste défilent au dos, avec une barre de progression. Appui long sur le Glyph Button pour pause.</p></div></article>
+        <article class="feat"><canvas data-icon="update" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Se met à jour tout seul</h3>
+          <p>À chaque ouverture, YTune regarde la dernière version, la télécharge, vérifie son empreinte SHA-256 et propose de l'installer.</p></div></article>
+      </div>
+    </section>
+
+    <section id="installer">
+      <div class="install">
+        <div>
+          <div class="head">
+            <p class="label red">Installer</p>
+            <h2>Trois gestes, une fois.</h2>
+          </div>
+          <ol class="steps">
+            <li><span class="num">1</span><div><h3>Téléchargez l'APK sur le téléphone</h3><p>Le bouton pointe toujours vers la dernière version publiée.</p></div></li>
+            <li><span class="num">2</span><div><h3>Autorisez le navigateur à installer des applis</h3><p>Android le demande une seule fois, pour les applis qui ne viennent pas du Play Store.</p></div></li>
+            <li><span class="num">3</span><div><h3>Installez, c'est tout</h3><p>Les versions suivantes arrivent depuis l'app elle-même. Android 8.0 ou plus récent.</p></div></li>
+          </ol>
+          <div class="cta">
+            <a class="btn btn-dl" href="https://github.com/kream0/ytune/releases/latest/download/ytune.apk" target="_blank" rel="noopener">
+              <span class="play"><svg viewBox="0 0 10 12" aria-hidden="true"><path d="M0 0 10 6 0 12z" fill="var(--red)"/></svg></span>
+              Télécharger l'APK
+              <small>DERNIÈRE VERSION</small>
+            </a>
+          </div>
+        </div>
+        <div class="qr-card">
+          <p class="label">Sur un ordinateur&nbsp;? Scannez avec le téléphone</p>
+          <div class="qr-tile"><canvas id="qr" width="600" height="600" role="img" aria-label="QR code du lien de téléchargement de l'APK"></canvas></div>
+          <div class="link-row">
+            <code id="apk-url">https://github.com/kream0/ytune/releases/latest/download/ytune.apk</code>
+            <button type="button" id="copy">COPIER</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="row">
+      <a class="brand" href="#top"><b>YTUNE</b></a>
+      <a class="label" href="https://github.com/kream0/ytune" target="_blank" rel="noopener">Code source et versions sur GitHub ↗</a>
+    </div>
+    <p>Recherche et flux&nbsp;: NewPipeExtractor. Lecture&nbsp;: Media3. Paroles&nbsp;: LRCLIB. Polices&nbsp;: Doto, Space Grotesk et Space Mono. YTune n'est affilié ni à YouTube ni à Nothing.</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const FONT = {"!":[190],"\"":[14,0,14],"#":[40,254,40,254,40],"$":[8,84,254,84,32],"%":[196,42,84,168,70],"&":[108,146,172,64,160],"'":[14],"(":[56,68,130],")":[130,68,56],"*":[84,56,16,56,84],"+":[16,16,124,16,16],",":[256,192,64],"-":[16,16,16,16,16],".":[128,448,128],"/":[192,32,16,8,6],"0":[56,68,130,68,56],"1":[136,132,254,128,128],"2":[196,162,146,146,140],"3":[66,130,146,154,102],"4":[48,40,36,254,32],"5":[94,146,138,138,114],"6":[120,164,146,146,96],"7":[2,194,34,26,6],"8":[108,146,146,146,108],"9":[12,146,146,74,60],":":[136,476,136],";":[264,220,72],"<":[16,40,68,130],"=":[40,40,40,40,40],">":[130,68,40,16],"?":[4,2,178,10,4],"@":[124,130,178,170,28],"A":[248,36,34,36,248],"B":[130,254,146,146,108],"C":[124,130,130,130,68],"D":[130,254,130,130,124],"E":[254,146,146,146,130],"F":[254,18,18,18,2],"G":[124,130,130,162,100],"H":[254,16,16,16,254],"I":[130,254,130],"J":[64,128,130,126,2],"K":[254,16,40,68,130],"L":[254,128,128,128,128],"M":[254,8,16,8,254],"N":[254,8,16,32,254],"O":[124,130,130,130,124],"P":[254,18,18,18,12],"Q":[124,130,194,130,380],"R":[254,18,50,82,140],"S":[76,146,146,146,100],"T":[2,2,254,2,2],"U":[126,128,128,128,126],"V":[14,112,128,112,14],"W":[254,64,48,64,254],"X":[198,40,16,40,198],"Y":[6,8,240,8,6],"Z":[194,162,146,138,134],"[":[254,130,130],"\\":[6,8,16,32,192],"]":[130,130,254],"^":[8,4,2,4,8],"_":[256,256,256,256,256],"`":[1,2],"a":[64,168,168,168,240],"b":[254,80,136,136,112],"c":[112,136,136,136,80],"d":[112,136,136,80,254],"e":[112,168,168,168,48],"f":[16,252,18,18,4],"g":[304,584,584,584,504],"h":[254,16,8,8,240],"i":[136,250,128],"j":[384,512,520,506],"k":[254,32,32,80,136],"l":[130,254,128],"m":[248,8,112,8,240],"n":[248,16,8,8,240],"o":[112,136,136,136,112],"p":[1016,80,136,136,112],"q":[112,136,136,80,1016],"r":[248,16,8,8,16],"s":[144,168,168,168,64],"t":[8,126,136,136,64],"u":[120,128,128,64,248],"v":[24,96,128,96,24],"w":[120,128,96,128,120],"x":[136,80,32,80,136],"y":[312,576,576,544,504],"z":[136,200,168,152,136],"{":[16,84,170,130],"|":[254],"}":[130,170,84,16],"~":[12,2,4,8,6]};
+  const QR = ["1111111011111011101011001010101111111","1000001011001010011110010110101000001","1011101001110100001010100110101011101","1011101010010001110100000110001011101","1011101001100011010101000011101011101","1000001001100100100101001110101000001","1111111010101010101010101010101111111","0000000010000100111111011011100000000","1011011100000100100110010011001001011","1100100001000001110000001110100100010","0100111100011011011001111100100101000","1001010011110001000100010111011001100","0110011010110110010010111110011010111","1001100011010101100100101011011111011","1000111100101100011110101110111010110","0111110100100110111111101010000110001","0011001111100001111110010100000101100","0010100111110110100111011001101000111","1011001111100011100101001011000110111","1000010111001010011100110000100101010","0010111010011010111001000000110111001","0000100111110110001100110100110001010","0010101110100100110001111100101100000","0000110000000101101111101100000011110","1101111011010001001011100111011010101","0110100100101010111010001111111111011","0111111001100011100110001010010100110","1011100011011010100001001011001101000","0001111100110011101011110100111110110","0000000011110101011010011101100010101","1111111011101011110001001010101010111","1000001011001000100100100001100010010","1011101001000110001000100000111111011","1011101011001011001011110101011010101","1011101011011000100110110110111011100","1000001001111000101010011110011111100","1111111010110101010100110110010011111"];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const root = document.documentElement;
+  const css = name => getComputedStyle(root).getPropertyValue(name).trim();
+  let T = {};
+  const readTheme = () => {
+    T = {
+      bg: css("--bg"), surface: css("--surface"), fg: css("--fg"), dim: css("--dim"), faint: css("--faint"),
+      off: css("--dot-off"), red: css("--red"), orange: css("--s-orange"), yellow: css("--s-yellow"),
+      green: css("--s-green"), gOff: css("--glyph-off"), gOn: css("--glyph-on"), qrFg: css("--qr-fg"), qrBg: css("--qr-bg"),
+    };
+  };
+  readTheme();
+
+  // ---------------------------------------------------------------- colour helpers
+  const hex = h => { h = h.replace("#", ""); if (h.length === 3) h = [...h].map(c => c + c).join(""); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const mix = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",")})`; };
+  // The app's offline scale: red → orange → yellow → green.
+  const saveColor = p => p < 1 / 3 ? mix(T.red, T.orange, p * 3) : p < 2 / 3 ? mix(T.orange, T.yellow, (p - 1 / 3) * 3) : mix(T.yellow, T.green, (p - 2 / 3) * 3);
+
+  // ---------------------------------------------------------------- dot text (the app's DotFont)
+  const layout = text => {
+    const cols = [];
+    const s = text.normalize("NFD").replace(/\p{Mn}+/gu, "");
+    for (const ch of s) {
+      if (ch === " ") cols.push(0, 0, 0);
+      else if (ch === "·") cols.push(1 << 4, 0);
+      else if (FONT[ch]) cols.push(...FONT[ch], 0);
+    }
+    while (cols.length && cols[cols.length - 1] === 0) cols.pop();
+    return cols;
+  };
+
+  // ---------------------------------------------------------------- Glyph Matrix (25×25, like MatrixRenderer)
+  const matrix = (() => {
+    const canvas = document.getElementById("matrix");
+    const btn = document.getElementById("matrix-btn");
+    const ctx = canvas.getContext("2d");
+    const N = 25, TEXT_TOP = 6, PROG_ROW = 20, P_FROM = 4, P_TO = 20, GAP = 14;
+    const c = (N - 1) / 2, r = N / 2 + 0.25;
+    const visible = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) visible.push(Math.hypot(x - c, y - c) <= r);
+    const EQ = [[1, 2, 3, 4, 3, 2, 3, 1], [3, 4, 2, 1, 2, 4, 3, 2], [2, 1, 3, 2, 4, 3, 1, 3]];
+    const tracks = [["Midnight City", "M83"], ["Around the World", "Daft Punk"], ["Nightcall", "Kavinsky"], ["Instant Crush", "Daft Punk"]];
+    let t = 0, strip = [], scroll = -N, progress = 0.18, playing = true, tick = 0;
+    const load = i => { const [a, b] = tracks[i % tracks.length]; strip = layout(`${a}  ·  ${b}`); scroll = -N + 2; };
+    load(0);
+
+    const frame = () => {
+      const f = new Array(N * N).fill(0);
+      const loop = strip.length + GAP;
+      for (let x = 0; x < N; x++) {
+        const i = (((scroll + x) % loop) + loop) % loop;
+        const col = i < strip.length ? strip[i] : 0;
+        if (!col) continue;
+        for (let row = 0; row < 10; row++) if (col & (1 << row)) f[(TEXT_TOP + row) * N + x] = playing ? 255 : 150;
+      }
+      const base = TEXT_TOP - 3;
+      if (playing) {
+        for (let b = 0; b < 3; b++) { const lv = EQ[b][Math.floor(tick / 3) % 8]; for (let h = 0; h < lv; h++) f[(base - h) * N + (Math.floor(N / 2) - 2 + b * 2)] = 200; }
+      } else {
+        for (let h = 0; h < 3; h++) { f[(base - h) * N + Math.floor(N / 2) - 1] = 200; f[(base - h) * N + Math.floor(N / 2) + 1] = 200; }
+      }
+      const head = P_FROM + Math.round(progress * (P_TO - P_FROM));
+      for (let x = P_FROM; x <= P_TO; x++) f[PROG_ROW * N + x] = x <= head ? 255 : 28;
+      return f;
+    };
+
+    const draw = () => {
+      const W = canvas.width, cell = W / N, rad = cell * 0.36;
+      ctx.clearRect(0, 0, W, W);
+      const f = frame();
+      for (let i = 0; i < N * N; i++) {
+        if (!visible[i]) continue;
+        const x = (i % N + 0.5) * cell, y = (Math.floor(i / N) + 0.5) * cell, v = f[i];
+        ctx.beginPath();
+        ctx.arc(x, y, rad, 0, Math.PI * 2);
+        if (v) {
+          ctx.fillStyle = mix(T.gOff, T.gOn, v / 255);
+          ctx.shadowColor = `rgba(255,255,255,${0.55 * v / 255})`;
+          ctx.shadowBlur = cell * 0.55;
+        } else {
+          ctx.fillStyle = T.gOff;
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+    };
+
+    let track = 0, last = 0, acc = 0;
+    const step = now => {
+      if (!last) last = now;
+      acc += now - last; last = now;
+      while (acc >= 85) {
+        acc -= 85;
+        tick++;
+        if (playing) {
+          scroll++;
+          progress += 0.0011;
+          if (progress >= 1) { progress = 0; load(++track); }
+        }
+      }
+      draw();
+    };
+    btn.addEventListener("click", () => {
+      playing = !playing;
+      btn.setAttribute("aria-pressed", String(playing));
+      btn.setAttribute("aria-label", playing ? "Glyph Matrix : lecture en cours. Touchez pour mettre en pause." : "Glyph Matrix : en pause. Touchez pour reprendre.");
+      if (reduce) draw();
+    });
+    if (reduce) { scroll = 0; draw(); }
+    return { step, draw, el: canvas };
+  })();
+
+  // ---------------------------------------------------------------- dot seek bar (as in the player)
+  const dotbar = (canvas, played, saved, color) => {
+    const ctx = canvas.getContext("2d"), W = canvas.width, H = canvas.height;
+    const n = Math.max(24, Math.round(W / (H * 0.36))), cell = W / n, rad = Math.min(cell, H) * 0.24;
+    const headAt = Math.min(n - 1, Math.floor(played * n));
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < n; i++) {
+      const f = (i + .5) / n;
+      if (i === headAt) continue;
+      ctx.fillStyle = i < headAt ? T.fg : f <= saved ? color : T.off;
+      ctx.beginPath(); ctx.arc((i + .5) * cell, H / 2, rad, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = T.red;
+    ctx.beginPath(); ctx.arc((headAt + .5) * cell, H / 2, rad * 2.1, 0, 7); ctx.fill();
+  };
+
+  // ---------------------------------------------------------------- feature icons (dot pictograms)
+  const ICONS = {
+    search: ["0011100", "0100010", "1000001", "1000001", "1000001", "0100010", "0011110", "0000011", "0000001"],
+    save: ["0001000", "0001000", "0001000", "1001001", "0101010", "0011100", "0001000", "0000000", "1111111"],
+    lyrics: ["1111111", "0000000", "1111100", "0000000", "1111111", "0000000", "1110000", "0000000", "1111110"],
+    auto: ["0011100", "0100010", "1000001", "1000101", "1001101", "1000101", "1000001", "0100010", "0011100"],
+    queue: ["1101111", "0000000", "1101111", "0000000", "1101111", "0000000", "1101111", "0000000", "1101111"],
+    album: ["1111111", "1000001", "1011101", "1010101", "1011101", "1000001", "1111111", "0000000", "0111110"],
+    list: ["1011111", "0000000", "1011111", "0000000", "1011100", "0000000", "1010000", "0000100", "0001110"],
+    ear: ["0111000", "1000100", "1010100", "1000100", "0111100", "0000100", "0000100", "0000100", "0000100"],
+    glyph: ["0011100", "0111110", "1101011", "1111111", "1010101", "1111111", "1101011", "0111110", "0011100"],
+    update: ["0001000", "0011100", "0101010", "1001001", "0001000", "0001000", "0001000", "0000000", "1111111"],
+  };
+  const drawIcon = canvas => {
+    const rows = ICONS[canvas.dataset.icon], ctx = canvas.getContext("2d"), W = canvas.width;
+    const n = 9, cell = W / n, ox = (W - rows[0].length * cell) / 2;
+    ctx.clearRect(0, 0, W, W);
+    rows.forEach((r, y) => [...r].forEach((b, x) => {
+      ctx.fillStyle = b === "1" ? (y === 0 && x === rows[0].indexOf("1") ? T.red : T.fg) : T.off;
+      ctx.beginPath(); ctx.arc(ox + (x + .5) * cell, (y + .5) * cell, cell * (b === "1" ? .36 : .18), 0, 7); ctx.fill();
+    }));
+  };
+
+  // ---------------------------------------------------------------- QR code (drawn in dots)
+  const drawQR = () => {
+    const canvas = document.getElementById("qr"), ctx = canvas.getContext("2d"), n = QR.length, W = canvas.width, cell = W / n;
+    ctx.fillStyle = T.qrBg; ctx.fillRect(0, 0, W, W);
+    ctx.fillStyle = T.qrFg;
+    const finder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
+    const rr = (x, y, w, h, rad) => { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, rad) : ctx.rect(x, y, w, h); };
+    for (const [r0, c0] of [[0, 0], [0, n - 7], [n - 7, 0]]) {
+      rr(c0 * cell, r0 * cell, 7 * cell, 7 * cell, cell * 1.8); ctx.fill();
+      ctx.fillStyle = T.qrBg; rr((c0 + 1) * cell, (r0 + 1) * cell, 5 * cell, 5 * cell, cell * 1.2); ctx.fill();
+      ctx.fillStyle = T.qrFg; rr((c0 + 2) * cell, (r0 + 2) * cell, 3 * cell, 3 * cell, cell * .9); ctx.fill();
+    }
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      if (QR[r][c] !== "1" || finder(r, c)) continue;
+      ctx.beginPath(); ctx.arc((c + .5) * cell, (r + .5) * cell, cell * .46, 0, 7); ctx.fill();
+    }
+  };
+
+  // ---------------------------------------------------------------- offline panel (animated)
+  const save = (() => {
+    const bar = document.getElementById("save-bar"), chip = document.getElementById("save-chip"), pos = document.getElementById("save-pos");
+    const TOTAL = 429; // 7:09
+    const CYCLE = 11000;
+    let start = null;
+    const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+    const render = now => {
+      if (start === null) start = now - 0.2 * CYCLE; // open on "saving", not on a blank bar
+      renderAt((((now - start) % CYCLE) + CYCLE) % CYCLE / CYCLE);
+    };
+    const renderAt = t => {
+      let saved, label, color;
+      if (t < .12) { saved = 0; label = "STREAMING · SAVE"; color = T.dim; }
+      else if (t < .2) { saved = 0; label = "QUEUED"; color = T.dim; }
+      else if (t < .78) { saved = (t - .2) / .58; label = `SAVING ${Math.round(saved * 100)}%`; color = saveColor(saved); }
+      else { saved = 1; label = "OFFLINE"; color = T.green; }
+      const played = 0.08 + t * 0.3;
+      dotbar(bar, played, Math.max(saved, played), saved >= 1 ? T.green : saveColor(saved));
+      if (chip.textContent !== label) chip.textContent = label;
+      chip.style.color = color;
+      pos.textContent = fmt(played * TOTAL);
+    };
+    return { render, renderAt };
+  })();
+
+  // ---------------------------------------------------------------- paint + loop
+  const paintStatic = () => {
+    document.querySelectorAll("canvas[data-icon]").forEach(drawIcon);
+    drawQR();
+  };
+  paintStatic();
+  matrix.draw();
+  save.renderAt(0.63);
+
+  const onTheme = () => { readTheme(); paintStatic(); matrix.draw(); if (reduce) save.renderAt(0.63); };
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", onTheme);
+  new MutationObserver(onTheme).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+
+  if (!reduce) {
+    const seen = new Map();
+    const io = new IntersectionObserver(es => es.forEach(e => seen.set(e.target, e.isIntersecting)), { rootMargin: "80px" });
+    const saveBar = document.getElementById("save-bar");
+    [matrix.el, saveBar].forEach(el => { seen.set(el, true); io.observe(el); });
+    const loop = now => {
+      if (seen.get(matrix.el)) matrix.step(now);
+      if (seen.get(saveBar)) save.render(now);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  // ---------------------------------------------------------------- theme switch (remembered on this device)
+  const dark = matchMedia("(prefers-color-scheme: dark)");
+  const modeButtons = document.querySelectorAll(".mode button");
+  const showMode = () => {
+    const current = root.dataset.theme || (dark.matches ? "dark" : "light");
+    modeButtons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === current)));
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = current === "dark" ? "#000000" : "#EEE8DA";
+  };
+  try { const saved = localStorage.getItem("ytune-theme"); if (saved === "dark" || saved === "light") root.dataset.theme = saved; } catch (e) {}
+  modeButtons.forEach(b => b.addEventListener("click", () => {
+    root.dataset.theme = b.dataset.mode;
+    try { localStorage.setItem("ytune-theme", b.dataset.mode); } catch (e) {}
+    showMode();
+  }));
+  dark.addEventListener("change", showMode);
+  new MutationObserver(showMode).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+  showMode();
+
+  // ---------------------------------------------------------------- copy link
+  const copy = document.getElementById("copy");
+  copy.addEventListener("click", () => {
+    const url = document.getElementById("apk-url").textContent;
+    const done = ok => { copy.textContent = ok ? "COPIÉ" : "SÉLECTIONNÉ"; setTimeout(() => (copy.textContent = "COPIER"), 1800); };
+    const select = () => { const s = getSelection(), r = document.createRange(); r.selectNodeContents(document.getElementById("apk-url")); s.removeAllRanges(); s.addRange(r); done(false); };
+    try { navigator.clipboard.writeText(url).then(() => done(true), select); } catch (e) { select(); }
+  });
+})();
+</script>
+</body>
+</html>
