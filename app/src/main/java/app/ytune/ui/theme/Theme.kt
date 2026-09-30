@@ -73,23 +73,24 @@ val DarkPalette = Palette(
     saveGreen = Color(0xFF35D07F),
 )
 
+/** The light theme: warm paper rather than white, with black ink and the same red. */
 val LightPalette = Palette(
     isDark = false,
-    background = Color(0xFFF1F1F1),
-    surface = Color(0xFFFFFFFF),
-    surfaceHigh = Color(0xFFE4E4E4),
-    outline = Color(0xFFD0D0D0),
-    text = Color(0xFF0A0A0A),
-    textDim = Color(0xFF626262),
-    textFaint = Color(0xFFA3A3A3),
+    background = Color(0xFFEEE8DA),
+    surface = Color(0xFFF7F3EA),
+    surfaceHigh = Color(0xFFE3DCCB),
+    outline = Color(0xFFD2C8B4),
+    text = Color(0xFF1C1A16),
+    textDim = Color(0xFF6A6252),
+    textFaint = Color(0xFFA0957F),
     accent = NothingRed,
-    dotOff = Color(0xFFD6D6D6),
-    inverse = Color(0xFF000000),
-    onInverse = Color(0xFFFFFFFF),
+    dotOff = Color(0xFFD8CFBC),
+    inverse = Color(0xFF1C1A16),
+    onInverse = Color(0xFFF7F3EA),
     saveRed = NothingRed,
-    saveOrange = Color(0xFFE0600F),
-    saveYellow = Color(0xFFCC9A00),
-    saveGreen = Color(0xFF1F9E57),
+    saveOrange = Color(0xFFD9580B),
+    saveYellow = Color(0xFFB98B00),
+    saveGreen = Color(0xFF1E8A4C),
 )
 
 val LocalPalette = staticCompositionLocalOf { DarkPalette }
@@ -126,9 +127,9 @@ object Type {
     val input = TextStyle(fontFamily = Fonts.Sans, fontWeight = FontWeight.Medium, fontSize = 17.sp)
 }
 
+/** [dark]: black theme, otherwise paper (see [app.ytune.data.ThemeMode]). */
 @Composable
-fun YTuneTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
+fun YTuneTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val p = if (dark) DarkPalette else LightPalette
     val scheme = if (dark) {
         darkColorScheme(

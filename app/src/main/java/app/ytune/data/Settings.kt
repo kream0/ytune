@@ -27,6 +27,12 @@ enum class AudioQuality(val label: String, val description: String) {
     SAVER("SAVER", "Lowest bitrate, saves data"),
 }
 
+enum class ThemeMode(val label: String, val description: String) {
+    SYSTEM("SYSTEM", "Follows the phone's dark mode: black when it's on, paper when it's off."),
+    DARK("DARK", "Black, like Nothing OS."),
+    PAPER("PAPER", "Warm paper instead of white, with black ink."),
+}
+
 data class AppSettings(
     val mode: StreamMode = StreamMode.STREAM,
     val strategy: DownloadStrategy = DownloadStrategy.PROGRESSIVE,
@@ -42,6 +48,7 @@ data class AppSettings(
     val autoplay: Boolean = true,
     /** Player shows synced lyrics instead of the cover (tap the cover to cycle dots / photo / lyrics). */
     val lyricsView: Boolean = false,
+    val theme: ThemeMode = ThemeMode.SYSTEM,
 ) {
     val downloadWhileStreaming: Boolean get() = mode == StreamMode.STREAM_AND_DOWNLOAD
 }
@@ -73,6 +80,7 @@ class Settings(context: Context) {
             autoUpdate = prefs.getBoolean("autoUpdate", d.autoUpdate),
             autoplay = prefs.getBoolean("autoplay", d.autoplay),
             lyricsView = prefs.getBoolean("lyricsView", d.lyricsView),
+            theme = enumOr(prefs.getString("theme", null), d.theme),
         )
     }
 
@@ -90,6 +98,7 @@ class Settings(context: Context) {
             .putBoolean("autoUpdate", s.autoUpdate)
             .putBoolean("autoplay", s.autoplay)
             .putBoolean("lyricsView", s.lyricsView)
+            .putString("theme", s.theme.name)
             .apply()
     }
 

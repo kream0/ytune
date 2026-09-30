@@ -608,6 +608,12 @@ img { max-width: 100%; }
         <article class="feat"><canvas data-icon="glyph" width="112" height="112" aria-hidden="true"></canvas><div>
           <h3>Glyph Matrix</h3>
           <p>Sur Nothing Phone (3) et (4a) Pro, titre et artiste défilent au dos, avec une barre de progression. Appui long sur le Glyph Button pour pause.</p></div></article>
+        <article class="feat"><canvas data-icon="theme" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>Sombre ou papier</h3>
+          <p>Noir comme Nothing OS, ou papier chaud à l'encre noire. Au choix dans les réglages, ou selon le mode sombre du téléphone.</p></div></article>
+        <article class="feat"><canvas data-icon="quality" width="112" height="112" aria-hidden="true"></canvas><div>
+          <h3>La qualité que vous voulez</h3>
+          <p>Opus autour de 160 kbps, AAC compatible partout, ou le débit le plus bas pour économiser les données.</p></div></article>
         <article class="feat"><canvas data-icon="update" width="112" height="112" aria-hidden="true"></canvas><div>
           <h3>Se met à jour tout seul</h3>
           <p>À chaque ouverture, YTune regarde la dernière version, la télécharge, vérifie son empreinte SHA-256 et propose de l'installer.</p></div></article>
@@ -801,6 +807,8 @@ img { max-width: 100%; }
     ear: ["0111000", "1000100", "1010100", "1000100", "0111100", "0000100", "0000100", "0000100", "0000100"],
     glyph: ["0011100", "0111110", "1101011", "1111111", "1010101", "1111111", "1101011", "0111110", "0011100"],
     update: ["0001000", "0011100", "0101010", "1001001", "0001000", "0001000", "0001000", "0000000", "1111111"],
+    theme: ["0011100", "0111010", "1111001", "1111001", "1111001", "1111001", "1111001", "0111010", "0011100"],
+    quality: ["0000001", "0000001", "0000101", "0000101", "0010101", "0010101", "1010101", "1010101", "1010101"],
   };
   const drawIcon = canvas => {
     const rows = ICONS[canvas.dataset.icon], ctx = canvas.getContext("2d"), W = canvas.width;

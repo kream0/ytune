@@ -35,6 +35,7 @@ import app.ytune.Graph
 import app.ytune.data.AudioQuality
 import app.ytune.data.DownloadStrategy
 import app.ytune.data.StreamMode
+import app.ytune.data.ThemeMode
 import app.ytune.data.formatBytes
 import app.ytune.glyph.GlyphLink
 import app.ytune.glyph.GlyphStatus
@@ -113,6 +114,16 @@ fun SettingsScreen() {
             }
             Line("Dot-matrix artwork", "Render cover art as dots on the player. Tap the cover to cycle dots / photo / lyrics") {
                 NothingSwitch(settings.dotArtwork, { on -> Graph.settings.update { it.copy(dotArtwork = on) } })
+            }
+        }
+
+        Section("Appearance") {
+            Block("Theme", settings.theme.description) {
+                Segmented(
+                    options = ThemeMode.entries.map { it.label },
+                    selected = settings.theme.ordinal,
+                    onSelect = { i -> Graph.settings.update { it.copy(theme = ThemeMode.entries[i]) } },
+                )
             }
         }
 

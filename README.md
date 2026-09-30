@@ -3,7 +3,7 @@
 <h1 align="center">YTune</h1>
 
 <p align="center">A sideloadable Android music player for YouTube, styled after Nothing OS (dot-matrix type, black and white, one red accent).<br>
-<b><a href="https://github.com/kream0/ytune/releases/latest/download/ytune.apk">Download the latest APK</a></b> · Android 8.0+</p>
+<b><a href="https://github.com/kream0/ytune/releases/latest/download/ytune.apk">Download the latest APK</a></b> · Android 8.0+ · <a href="https://kream0.github.io/ytune/">Website</a></p>
 
 <table align="center">
   <tr>
@@ -43,6 +43,7 @@
   - List rows get a matching ring, or a green dot when the track is saved.
 - **Reorder the queue by dragging:** grab the six-dot handle on the left of a song in the queue and move it up or down. The row lifts, the others slide out of the way, the list scrolls when you reach an edge, and each step ticks. Long-press the rest of the row to select instead.
 - **Player:** queue, shuffle, repeat, seek, a dot-matrix seek bar and "halftone" dot artwork. Tap the cover to cycle **dots → photo → lyrics**.
+- **Dark or paper:** black like Nothing OS, or warm paper with black ink instead of plain white. Pick it in *Settings → Appearance* (`SYSTEM / DARK / PAPER`); *System* follows the phone's dark mode. The status bar icons follow the choice.
 - **Lyrics:** Spotify-style synced lyrics where the cover was. They scroll on their own, the line being sung fills in karaoke-style (word by word when the lyrics have word timing), sung lines stay lit and upcoming ones are dimmed. Scroll by hand to look around; it catches up again after a few seconds. Long-press a line to jump there. Lyrics come from [LRCLIB](https://lrclib.net), a free, open lyrics database. YouTube titles are cleaned up first ("Artist - Title (Official Video)" → artist + title), and synced lyrics are only used when their length matches the song, otherwise the plain text is shown ("NOT SYNCED"). Lyrics are cached, and songs you save fetch theirs in the background, so they work offline too.
 - **Headset and Nothing Ear controls:** playback runs in a Media3 `MediaSession`, so it works from Bluetooth media keys (play/pause, next, previous), the lock screen and the notification. It pauses when the earbuds disconnect or come out, and pressing play with the app closed resumes your last queue.
 
@@ -106,6 +107,7 @@ Tags must look like `vMAJOR.MINOR.PATCH`; the Android versionCode is derived fro
 | Playback, media session, notification | AndroidX Media3 / ExoPlayer |
 | Downloads | Ranged HTTP in 2 MB chunks (like yt-dlp's chunked mode), resumable |
 | UI | Jetpack Compose, fonts Doto, Space Grotesk and Space Mono (OFL) |
+| Website | `docs/` (one HTML page), published to GitHub Pages by the *Site* workflow |
 
 Queue items are only `ytune://track/<videoId>` placeholders. The real audio URL is extracted just before a track plays, or the local file is used if it's downloaded. That keeps huge queues cheap and avoids expired URLs. A 512 MB stream cache makes replays instant.
 
