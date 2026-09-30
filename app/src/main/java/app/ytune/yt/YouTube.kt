@@ -107,7 +107,16 @@ object YouTube {
     // ---------------------------------------------------------------- search
 
     fun search(query: String, filter: SearchFilter): SearchPager =
-        SearchPager(service.getSearchExtractor(query, listOf(filter.contentFilter), ""), filter)
+        SearchPager(service.getSearchExtractor(query, listOf(filter.contentFilter), ""), filter, query)
+
+    /**
+     * YouTube Music albums for [query], from our own parser (see [MusicAlbums]: NewPipe's skips
+     * some albums); empty when it failed.
+     */
+    fun albums(query: String): List<PlaylistRef> =
+        runCatching { MusicAlbums.search(query) }.getOrDefault(emptyList()).mapNotNull { a ->
+            a.url?.let { PlaylistRef(url = it, title = a.title, uploader = a.artist, thumbnail = a.thumbnail, isAlbum = true) }
+        }
 
     fun suggestions(query: String): List<String> =
         service.suggestionExtractor.suggestionList(query).take(8)
@@ -282,13 +291,15 @@ object YouTube {
 class SearchPager internal constructor(
     private val extractor: SearchExtractor,
     private val filter: SearchFilter,
+    private val query: String,
 ) {
     private var started = false
     private var next: Page? = null
     val hasMore: Boolean get() = !started || next != null
 
     fun loadNext(): List<ResultItem> {
-        val page = if (!started) {
+        val first = !started
+        val page = if (first) {
             extractor.fetchPage()
             started = true
             extractor.initialPage
@@ -297,7 +308,11 @@ class SearchPager internal constructor(
             extractor.getPage(p)
         }
         next = if (page.hasNextPage()) page.nextPage else null
-        return page.items.mapNotNull { it.toResult(filter == SearchFilter.ALBUMS) }
+        val items = page.items.mapNotNull { it.toResult(filter == SearchFilter.ALBUMS) }
+        if (!first || filter != SearchFilter.ALBUMS) return items
+        // NewPipe's parser skips some albums: ours first, then any it found that we didn't.
+        val ours = YouTube.albums(query).map(::PlaylistResult)
+        return (ours + items).distinctBy { it.key }
     }
 }
 

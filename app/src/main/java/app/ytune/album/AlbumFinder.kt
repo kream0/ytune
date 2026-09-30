@@ -89,9 +89,7 @@ class AlbumFinder(private val http: OkHttpClient) {
 
     private suspend fun options(album: AlbumMatch.Album, track: Track): List<AlbumOption> = coroutineScope {
         val playlistsJob = async { search("${album.title} ${album.artist}", SearchFilter.PLAYLISTS) }
-        val albumRefs = (search("${album.artist} ${album.title}", SearchFilter.ALBUMS) + search(album.title, SearchFilter.ALBUMS))
-            .map { it.copy(isAlbum = true) }
-            .distinctBy { it.url }
+        val albumRefs = (albums("${album.artist} ${album.title}") + albums(album.title)).distinctBy { it.url }
         val candidates = AlbumMatch.candidates(albumRefs.map { AlbumMatch.Listing(it.title, it.uploader, it.url) }, album)
             .take(MAX_ALBUMS)
         // Open each lookalike album (in parallel) to count its tracks and look for the song.
@@ -125,6 +123,10 @@ class AlbumFinder(private val http: OkHttpClient) {
         val n = o.tracks ?: return true
         return n >= 2 || (n == 1 && o.isAlbum && album.kind == AlbumMatch.Kind.SINGLE)
     }
+
+    /** YouTube Music albums; NewPipe's search when ours came back empty. */
+    private fun albums(query: String): List<PlaylistRef> =
+        YouTube.albums(query).ifEmpty { search(query, SearchFilter.ALBUMS) }.map { it.copy(isAlbum = true) }
 
     private fun search(query: String, filter: SearchFilter): List<PlaylistRef> =
         runCatching { YouTube.search(query, filter).loadNext() }

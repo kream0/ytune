@@ -1,3 +1,4 @@
+import app.ytune.lyrics.LrcLib
 import app.ytune.lyrics.LyricsQuery
 import app.ytune.yt.MusicAlbums
 import app.ytune.yt.NewPipeHttp
@@ -63,6 +64,59 @@ fun lyricsFor(name: String, uploader: String?, duration: Long) {
         if (picked != null) { println("  => FOUND via q=$q synced=${picked.lyrics?.synced}"); return }
     }
     println("  => MISSING")
+}
+
+
+/** Old app parsing failed the whole answer when any entry had a null duration / instrumental. */
+fun strictFails(raw: String): Boolean {
+    val arr = JSONArray(raw)
+    return (0 until arr.length()).any { i ->
+        val o = arr.optJSONObject(i) ?: return@any true
+        (o.has("duration") && (o.isNull("duration") || o.opt("duration") !is Number)) ||
+            (o.has("instrumental") && (o.isNull("instrumental") || o.opt("instrumental") !is Boolean))
+    }
+}
+
+var httpErrors = 0
+
+fun rawSearch(artist: String?, title: String?, keywords: String? = null): String? {
+    val url = "https://lrclib.net/api/search".toHttpUrl().newBuilder().apply {
+        keywords?.let { addQueryParameter("q", it) }
+        title?.let { addQueryParameter("track_name", it) }
+        artist?.let { addQueryParameter("artist_name", it) }
+    }.build()
+    http.newCall(Request.Builder().url(url).header("User-Agent", "YTune-probe (https://github.com/kream0/ytune)").build()).execute().use {
+        if (!it.isSuccessful) { httpErrors++; println("    HTTP ${it.code} ${it.header("Retry-After") ?: ""}"); return null }
+        return it.body!!.string()
+    }
+}
+
+/** Old vs new outcome for one track, from the same LRCLIB answers. */
+fun compare(title: String, artist: String, durationSec: Long): Pair<String, String> {
+    val queries = LyricsQuery.candidates(title, artist)
+    val steps = queries.take(3).map { q -> { rawSearch(q.artist.takeIf { it.isNotBlank() }, q.title) } } +
+        listOfNotNull(queries.firstOrNull()?.let { q -> { rawSearch(null, null, "${q.artist} ${q.title}".trim()) } })
+    var old: String? = null; var new: String? = null
+    var oldAsked = false; var newAsked = false
+    for (step in steps) {
+        if (old != null && new != null) break
+        val raw = step() ?: continue
+        val found = LyricsQuery.pick(LrcLib.parse(raw), durationSec)?.let { if (it.instrumental) "INSTRUMENTAL" else "FOUND(synced=${it.lyrics?.synced})" }
+        if (new == null) { newAsked = true; if (found != null) new = found }
+        if (old == null && !strictFails(raw)) { oldAsked = true; if (found != null) old = found }
+    }
+    return (old ?: if (oldAsked) "MISSING" else "NO CONNECTION") to (new ?: if (newAsked) "MISSING" else "NO CONNECTION")
+}
+
+fun compareAlbum(url: String) {
+    val p = yt.getPlaylistExtractor(url).also { it.fetchPage() }
+    var oldOk = 0; var newOk = 0; var n = 0
+    p.initialPage.items.forEach {
+        val (o, nw) = compare(it.name, it.uploaderName.orEmpty().removeSuffix(" - Topic"), it.duration.coerceAtLeast(0))
+        n++; if (o.startsWith("FOUND") || o == "INSTRUMENTAL") oldOk++; if (nw.startsWith("FOUND") || nw == "INSTRUMENTAL") newOk++
+        println("  ${it.name} | ${it.uploaderName} | ${it.duration}s  old=$o  new=$nw")
+    }
+    println("  => ${p.name}: old app $oldOk/$n, new $newOk/$n, http errors so far $httpErrors")
 }
 
 fun items(url: String, lyricsOf: (StreamInfoItem) -> Boolean) {
@@ -136,6 +190,16 @@ fun main() {
         val lists = s.initialPage.items.filterIsInstance<PlaylistInfoItem>()
         lists.take(4).forEach { println("playlist: ${it.name} | [${it.uploaderName}] | count=${it.streamCount} | ${it.url}") }
         lists.firstOrNull()?.let { items(it.url) { i -> i.name.contains("Fake Love", true) || i.name.contains("Passionfruit", true) } }
+    }
+
+    section("Old vs new lyrics, whole album: More Life") { compareAlbum(moreLife) }
+    section("Old vs new lyrics, whole album: Scorpion") { compareAlbum(scorpion) }
+    section("Old vs new lyrics, song search results") {
+        val s = yt.getSearchExtractor("Drake", listOf(F.MUSIC_SONGS), "").also { it.fetchPage() }
+        s.initialPage.items.filterIsInstance<StreamInfoItem>().take(10).forEach {
+            val (o, nw) = compare(it.name, it.uploaderName.orEmpty().removeSuffix(" - Topic"), it.duration)
+            println("  ${it.name} | ${it.uploaderName} | ${it.duration}s  old=$o  new=$nw")
+        }
     }
 
     section("Lyrics for the song search item (baseline)") {
