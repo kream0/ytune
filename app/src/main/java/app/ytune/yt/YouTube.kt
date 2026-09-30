@@ -4,6 +4,7 @@ import android.net.Uri
 import app.ytune.data.AudioQuality
 import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
+import app.ytune.tr
 import okhttp3.OkHttpClient
 import org.schabi.newpipe.extractor.Image
 import org.schabi.newpipe.extractor.InfoItem
@@ -28,11 +29,13 @@ import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
-enum class SearchFilter(val label: String, val contentFilter: String) {
-    SONGS("SONGS", YoutubeSearchQueryHandlerFactory.MUSIC_SONGS),
-    VIDEOS("VIDEOS", YoutubeSearchQueryHandlerFactory.VIDEOS),
-    PLAYLISTS("PLAYLISTS", YoutubeSearchQueryHandlerFactory.PLAYLISTS),
-    ALBUMS("ALBUMS", YoutubeSearchQueryHandlerFactory.MUSIC_ALBUMS),
+enum class SearchFilter(private val labelEn: String, private val labelFr: String, val contentFilter: String) {
+    SONGS("SONGS", "TITRES", YoutubeSearchQueryHandlerFactory.MUSIC_SONGS),
+    VIDEOS("VIDEOS", "VIDÉOS", YoutubeSearchQueryHandlerFactory.VIDEOS),
+    PLAYLISTS("PLAYLISTS", "PLAYLISTS", YoutubeSearchQueryHandlerFactory.PLAYLISTS),
+    ALBUMS("ALBUMS", "ALBUMS", YoutubeSearchQueryHandlerFactory.MUSIC_ALBUMS);
+
+    val label: String get() = tr(labelEn, labelFr)
 }
 
 sealed interface ResultItem {
@@ -211,7 +214,9 @@ object YouTube {
         val candidates = extractor.audioStreams.filter {
             it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP && it.isUrl
         }
-        if (candidates.isEmpty()) throw IOException("No downloadable audio stream for this video")
+        if (candidates.isEmpty()) throw IOException(
+            tr("No downloadable audio stream for this video", "Aucun flux audio téléchargeable pour cette vidéo")
+        )
         val pick = choose(candidates, quality)
 
         val url = pick.content

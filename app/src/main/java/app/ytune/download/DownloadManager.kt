@@ -10,6 +10,7 @@ import app.ytune.data.LocalAudio
 import app.ytune.data.Settings
 import app.ytune.data.StreamMode
 import app.ytune.data.Track
+import app.ytune.tr
 import app.ytune.yt.ResolvedStream
 import app.ytune.yt.YouTube
 import kotlinx.coroutines.CancellationException
@@ -352,7 +353,7 @@ class DownloadManager(
                                 ?: -1L
                             g.total = total
                         }
-                        val body = response.body ?: throw IOException("Empty response body")
+                        val body = response.body ?: throw IOException(tr("Empty response body", "Réponse vide du serveur"))
                         var read = 0L
                         body.byteStream().use { input ->
                             while (true) {
@@ -376,7 +377,7 @@ class DownloadManager(
             }
         }
 
-        if (total > 0 && part.length() < total) throw IOException("Incomplete download")
+        if (total > 0 && part.length() < total) throw IOException(tr("Incomplete download", "Téléchargement incomplet"))
         target.delete()
         if (!part.renameTo(target)) {
             part.copyTo(target, overwrite = true)

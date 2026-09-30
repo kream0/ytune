@@ -6,6 +6,8 @@ import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
 import app.ytune.data.formatDuration
 import app.ytune.data.isLocal
+import app.ytune.tr
+import app.ytune.trCount
 import app.ytune.ui.components.Ic
 import app.ytune.ui.components.NameEntry
 import app.ytune.ui.components.SheetAction
@@ -23,20 +25,20 @@ object Actions {
         val added = Graph.downloads.enqueue(tracks)
         Graph.toast(
             when {
-                added == 0 -> "Already downloaded or queued"
-                added == 1 -> "Downloading 1 track"
-                else -> "Downloading $added tracks"
+                added == 0 -> tr("Already downloaded or queued", "Déjà téléchargé ou en attente")
+                added == 1 -> tr("Downloading 1 track", "Téléchargement d'un titre")
+                else -> tr("Downloading $added tracks", "Téléchargement de $added titres")
             }
         )
     }
 
     fun playVideo(videoId: String) {
-        Graph.toast("Loading…")
+        Graph.toast(tr("Loading…", "Chargement…"))
         Graph.scope.launch {
             val track = runCatching {
                 withContext(Dispatchers.IO) { YouTube.fetchTrack(videoId, Graph.settings.current.quality) }
             }.getOrElse {
-                Graph.toast("Couldn't load video: ${it.message}")
+                Graph.toast(tr("Couldn't load video: ${it.message}", "Impossible de charger la vidéo : ${it.message}"))
                 return@launch
             }
             Graph.player.playNow(track)
@@ -48,20 +50,25 @@ object Actions {
         if (ref.isLocal) {
             val saved = Graph.library.savedPlaylist(ref.url) ?: return
             val tracks = Graph.library.tracksOf(saved)
-            if (tracks.isEmpty()) Graph.toast("That playlist is empty") else block(saved.ref, tracks)
+            if (tracks.isEmpty()) Graph.toast(tr("That playlist is empty", "Cette playlist est vide")) else block(saved.ref, tracks)
             return
         }
-        Graph.toast("Loading “${ref.title}”…")
+        Graph.toast(tr("Loading “${ref.title}”…", "Chargement de « ${ref.title} »…"))
         Graph.scope.launch {
             val result = runCatching { withContext(Dispatchers.IO) { YouTube.loadWholePlaylist(ref.url) } }
             val (header, tracks) = result.getOrNull()
                 ?: Graph.library.savedPlaylist(ref.url)?.let { it.ref to Graph.library.tracksOf(it) }
                 ?: run {
-                    Graph.toast("Couldn't load playlist: ${result.exceptionOrNull()?.message}")
+                    Graph.toast(
+                        tr(
+                            "Couldn't load playlist: ${result.exceptionOrNull()?.message}",
+                            "Impossible de charger la playlist : ${result.exceptionOrNull()?.message}",
+                        )
+                    )
                     return@launch
                 }
             if (tracks.isEmpty()) {
-                Graph.toast("That playlist is empty")
+                Graph.toast(tr("That playlist is empty", "Cette playlist est vide"))
                 return@launch
             }
             block(header.copy(isAlbum = ref.isAlbum, thumbnail = header.thumbnail ?: ref.thumbnail), tracks)
@@ -70,7 +77,8 @@ object Actions {
 
     fun playPlaylist(ref: PlaylistRef, shuffle: Boolean = false) = withPlaylist(ref) { _, tracks ->
         Graph.player.playAll(tracks, 0, shuffle)
-        Graph.toast("${if (shuffle) "Shuffling" else "Playing"} ${tracks.size} tracks")
+        val count = tracksLabel(tracks.size)
+        Graph.toast(if (shuffle) tr("Shuffling $count", "Lecture aléatoire de $count") else tr("Playing $count", "Lecture de $count"))
     }
 
     fun queuePlaylist(ref: PlaylistRef) = withPlaylist(ref) { _, tracks ->
@@ -84,33 +92,44 @@ object Actions {
 
     fun savePlaylist(ref: PlaylistRef) = withPlaylist(ref) { header, tracks ->
         Graph.library.savePlaylist(header, tracks)
-        Graph.toast("Saved to library")
+        Graph.toast(
+            tr(
+                "Saved to library",
+                if (ref.isAlbum) "Album enregistré dans la bibliothèque" else "Playlist enregistrée dans la bibliothèque",
+            )
+        )
     }
 
     fun trackSheet(track: Track, extra: List<SheetAction> = emptyList()): SheetSpec {
         val downloaded = Graph.library.isDownloaded(track.id)
         val actions = buildList {
-            add(SheetAction("Play now", Ic.PlaylistPlay) { Graph.player.playNow(track) })
-            add(SheetAction("Add next in queue", Ic.PlayNext) {
+            add(SheetAction(tr("Play now", "Lire maintenant"), Ic.PlaylistPlay) { Graph.player.playNow(track) })
+            add(SheetAction(tr("Add next in queue", "Lire ensuite"), Ic.PlayNext) {
                 if (Graph.player.state.value.current?.id == track.id) {
-                    Graph.toast("That's the song playing now")
+                    Graph.toast(tr("That's the song playing now", "Ce titre est déjà en cours de lecture"))
                 } else {
                     Graph.player.playNext(listOf(track))
-                    Graph.toast("Plays after the current song")
+                    Graph.toast(tr("Plays after the current song", "Sera lu après le titre en cours"))
                 }
             })
-            add(SheetAction("Add to queue", Ic.Queue) {
+            add(SheetAction(tr("Add to queue", "Ajouter à la file"), Ic.Queue) {
                 Graph.player.enqueue(listOf(track))
             })
-            add(SheetAction("Add to playlist", Ic.PlaylistAdd, next = { addToPlaylistSheet(listOf(track)) }))
-            add(SheetAction("Go to album", Ic.Album) { goToAlbum(track) })
+            add(
+                SheetAction(
+                    tr("Add to playlist", "Ajouter à une playlist"),
+                    Ic.PlaylistAdd,
+                    next = { addToPlaylistSheet(listOf(track)) },
+                )
+            )
+            add(SheetAction(tr("Go to album", "Aller à l'album"), Ic.Album) { goToAlbum(track) })
             if (downloaded) {
-                add(SheetAction("Delete download", Ic.Delete, destructive = true) {
+                add(SheetAction(tr("Delete download", "Supprimer le téléchargement"), Ic.Delete, destructive = true) {
                     Graph.library.deleteDownload(track.id)
-                    Graph.toast("Download deleted")
+                    Graph.toast(tr("Download deleted", "Téléchargement supprimé"))
                 })
             } else {
-                add(SheetAction("Download", Ic.Download) { download(listOf(track)) })
+                add(SheetAction(tr("Download", "Télécharger"), Ic.Download) { download(listOf(track)) })
             }
             addAll(extra)
         }
@@ -124,18 +143,23 @@ object Actions {
             title = ref.title,
             subtitle = listOf(if (ref.isAlbum) "Album" else "Playlist", ref.uploader).filter { it.isNotBlank() }.joinToString(" · "),
             actions = listOf(
-                SheetAction("Open", Ic.PlaylistPlay, onClick = onOpen),
-                SheetAction("Play all", Ic.PlaylistPlay) { playPlaylist(ref) },
-                SheetAction("Shuffle play", Ic.Shuffle) { playPlaylist(ref, shuffle = true) },
-                SheetAction("Add all to queue", Ic.PlaylistAdd) { queuePlaylist(ref) },
-                SheetAction("Download all", Ic.Download) { downloadPlaylist(ref) },
+                SheetAction(tr("Open", "Ouvrir"), Ic.PlaylistPlay, onClick = onOpen),
+                SheetAction(tr("Play all", "Tout lire"), Ic.PlaylistPlay) { playPlaylist(ref) },
+                SheetAction(tr("Shuffle play", "Lecture aléatoire"), Ic.Shuffle) { playPlaylist(ref, shuffle = true) },
+                SheetAction(tr("Add all to queue", "Tout ajouter à la file"), Ic.PlaylistAdd) { queuePlaylist(ref) },
+                SheetAction(tr("Download all", "Tout télécharger"), Ic.Download) { downloadPlaylist(ref) },
                 if (saved) {
-                    SheetAction("Remove from library", Ic.Delete, destructive = true) {
+                    SheetAction(tr("Remove from library", "Retirer de la bibliothèque"), Ic.Delete, destructive = true) {
                         Graph.library.removePlaylist(ref.url)
-                        Graph.toast("Removed from library")
+                        Graph.toast(
+                            tr(
+                                "Removed from library",
+                                if (ref.isAlbum) "Album retiré de la bibliothèque" else "Playlist retirée de la bibliothèque",
+                            )
+                        )
                     }
                 } else {
-                    SheetAction("Save to library", Ic.BookmarkBorder) { savePlaylist(ref) }
+                    SheetAction(tr("Save to library", "Enregistrer dans la bibliothèque"), Ic.BookmarkBorder) { savePlaylist(ref) }
                 },
             ),
         )
@@ -148,14 +172,19 @@ object Actions {
      * has it as one long video, offers that instead.
      */
     fun goToAlbum(track: Track) {
-        Graph.toast("Looking for the album…")
+        Graph.toast(tr("Looking for the album…", "Recherche de l'album…"))
         Graph.scope.launch {
             val result = try {
                 Graph.albums.find(track)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Graph.toast("Couldn't look up the album (${e.message ?: "offline?"})")
+                Graph.toast(
+                    tr(
+                        "Couldn't look up the album (${e.message ?: "offline?"})",
+                        "Impossible de rechercher l'album (${e.message ?: "hors ligne ?"})",
+                    )
+                )
                 return@launch
             }
             when (result) {
@@ -167,17 +196,26 @@ object Actions {
                     Nav.showSheet(
                         SheetSpec(
                             title = result.album.title,
-                            subtitle = "${result.album.artist} · not on YouTube as an album · one ${formatDuration(video.durationSec)} video",
+                            subtitle = tr(
+                                "${result.album.artist} · not on YouTube as an album · one ${formatDuration(video.durationSec)} video",
+                                "${result.album.artist} · pas en album sur YouTube · une vidéo de ${formatDuration(video.durationSec)}",
+                            ),
                             actions = listOf(
-                                SheetAction("Play the full album", Ic.PlaylistPlay) { Graph.player.playNow(video) },
-                                SheetAction("Add to queue", Ic.Queue) { Graph.player.enqueue(listOf(video)) },
-                                SheetAction("Download", Ic.Download) { download(listOf(video)) },
+                                SheetAction(tr("Play the full album", "Lire l'album complet"), Ic.PlaylistPlay) {
+                                    Graph.player.playNow(video)
+                                },
+                                SheetAction(tr("Add to queue", "Ajouter à la file"), Ic.Queue) { Graph.player.enqueue(listOf(video)) },
+                                SheetAction(tr("Download", "Télécharger"), Ic.Download) { download(listOf(video)) },
                             ),
                         )
                     )
                 }
-                is AlbumResult.NotOnYouTube -> Graph.toast("“${result.album.title}” isn't on YouTube")
-                AlbumResult.Unknown -> Graph.toast("Couldn't tell which album this song is from")
+                is AlbumResult.NotOnYouTube -> Graph.toast(
+                    tr("“${result.album.title}” isn't on YouTube", "« ${result.album.title} » n'est pas sur YouTube")
+                )
+                AlbumResult.Unknown -> Graph.toast(
+                    tr("Couldn't tell which album this song is from", "Impossible de savoir de quel album vient ce titre")
+                )
             }
         }
     }
@@ -190,8 +228,10 @@ object Actions {
         title = result.album.title,
         subtitle = listOfNotNull(
             result.album.artist,
-            result.album.tracks?.let { "${tracksLabel(it)} on the album (listed first)" },
-            "✓ = has this song",
+            result.album.tracks?.let {
+                tr("${tracksLabel(it)} on the album (listed first)", "${tracksLabel(it)} sur l'album (en tête de liste)")
+            },
+            tr("✓ = has this song", "✓ = contient ce titre"),
         ).joinToString(" · "),
         actions = result.options.map { o ->
             val parts = buildList {
@@ -208,27 +248,32 @@ object Actions {
 
     // ------------------------------------------------------------------ your own playlists
 
-    fun tracksLabel(n: Int) = if (n == 1) "1 track" else "$n tracks"
+    fun tracksLabel(n: Int) = trCount(n, "track", "tracks", "titre", "titres")
 
     /** Menu for one of your playlists; [onOpen] is null when it's already open. */
     fun myPlaylistSheet(ref: PlaylistRef, onOpen: (() -> Unit)?): SheetSpec = SheetSpec(
         title = ref.title,
-        subtitle = "My playlist · ${tracksLabel(ref.count.coerceAtLeast(0).toInt())}",
+        subtitle = tr("My playlist", "Ma playlist") + " · ${tracksLabel(ref.count.coerceAtLeast(0).toInt())}",
         actions = listOfNotNull(
-            onOpen?.let { SheetAction("Open", Ic.PlaylistPlay, onClick = it) },
-            SheetAction("Play all", Ic.PlaylistPlay) { playPlaylist(ref) },
-            SheetAction("Shuffle play", Ic.Shuffle) { playPlaylist(ref, shuffle = true) },
-            SheetAction("Add all to queue", Ic.PlaylistAdd) { queuePlaylist(ref) },
-            SheetAction("Download all", Ic.Download) { downloadPlaylist(ref) },
-            SheetAction("Rename", Ic.Edit, next = { renamePlaylistSheet(ref) }),
-            SheetAction("Delete playlist", Ic.Delete, destructive = true, next = { deletePlaylistsSheet(listOf(ref)) }),
+            onOpen?.let { SheetAction(tr("Open", "Ouvrir"), Ic.PlaylistPlay, onClick = it) },
+            SheetAction(tr("Play all", "Tout lire"), Ic.PlaylistPlay) { playPlaylist(ref) },
+            SheetAction(tr("Shuffle play", "Lecture aléatoire"), Ic.Shuffle) { playPlaylist(ref, shuffle = true) },
+            SheetAction(tr("Add all to queue", "Tout ajouter à la file"), Ic.PlaylistAdd) { queuePlaylist(ref) },
+            SheetAction(tr("Download all", "Tout télécharger"), Ic.Download) { downloadPlaylist(ref) },
+            SheetAction(tr("Rename", "Renommer"), Ic.Edit, next = { renamePlaylistSheet(ref) }),
+            SheetAction(
+                tr("Delete playlist", "Supprimer la playlist"),
+                Ic.Delete,
+                destructive = true,
+                next = { deletePlaylistsSheet(listOf(ref)) },
+            ),
         ),
     )
 
     /** Pick one of your playlists (or make a new one) for [tracks]; [onDone] runs once they're in. */
     fun addToPlaylistSheet(
         tracks: List<Track>,
-        title: String = "Add to playlist",
+        title: String = tr("Add to playlist", "Ajouter à une playlist"),
         exclude: String? = null,
         onDone: (PlaylistRef) -> Unit = {},
     ): SheetSpec {
@@ -237,15 +282,19 @@ object Actions {
             title = title,
             subtitle = tracksLabel(tracks.size),
             actions = buildList {
-                add(SheetAction("New playlist", Ic.Add, next = { newPlaylistSheet(tracks, onDone) }))
+                add(SheetAction(tr("New playlist", "Nouvelle playlist"), Ic.Add, next = { newPlaylistSheet(tracks, onDone) }))
                 targets.forEach { p ->
                     add(
                         SheetAction("${p.ref.title}  ·  ${p.trackIds.size}", Ic.PlaylistPlay) {
                             val added = Graph.library.addToPlaylist(p.ref.url, tracks)
                             Graph.toast(
                                 when (added) {
-                                    0 -> "Already in “${p.ref.title}”"
-                                    else -> "Added ${tracksLabel(added)} to “${p.ref.title}”"
+                                    0 -> tr("Already in “${p.ref.title}”", "Déjà dans « ${p.ref.title} »")
+                                    else -> tr(
+                                        "Added ${tracksLabel(added)} to “${p.ref.title}”",
+                                        if (added == 1) "1 titre ajouté à « ${p.ref.title} »"
+                                        else "$added titres ajoutés à « ${p.ref.title} »",
+                                    )
                                 }
                             )
                             onDone(p.ref)
@@ -257,21 +306,30 @@ object Actions {
     }
 
     fun newPlaylistSheet(tracks: List<Track> = emptyList(), onDone: (PlaylistRef) -> Unit = {}): SheetSpec = SheetSpec(
-        title = "New playlist",
+        title = tr("New playlist", "Nouvelle playlist"),
         subtitle = if (tracks.isEmpty()) null else tracksLabel(tracks.size),
         content = {
-            NameEntry(initial = "", placeholder = "Playlist name", confirm = "Create") { name ->
+            NameEntry(
+                initial = "",
+                placeholder = tr("Playlist name", "Nom de la playlist"),
+                confirm = tr("Create", "Créer"),
+            ) { name ->
                 val ref = Graph.library.createPlaylist(name, tracks)
-                Graph.toast(if (tracks.isEmpty()) "Created “$name”" else "Created “$name” · ${tracksLabel(tracks.distinctBy { it.id }.size)}")
+                val created = tr("Created “$name”", "Playlist « $name » créée")
+                Graph.toast(if (tracks.isEmpty()) created else "$created · ${tracksLabel(tracks.distinctBy { it.id }.size)}")
                 onDone(ref)
             }
         },
     )
 
     fun renamePlaylistSheet(ref: PlaylistRef): SheetSpec = SheetSpec(
-        title = "Rename playlist",
+        title = tr("Rename playlist", "Renommer la playlist"),
         content = {
-            NameEntry(initial = ref.title, placeholder = "Playlist name", confirm = "Save") { name ->
+            NameEntry(
+                initial = ref.title,
+                placeholder = tr("Playlist name", "Nom de la playlist"),
+                confirm = tr("Save", "Enregistrer"),
+            ) { name ->
                 Graph.library.renamePlaylist(ref.url, name)
             }
         },
@@ -280,12 +338,23 @@ object Actions {
     fun deletePlaylistsSheet(refs: List<PlaylistRef>, onDone: () -> Unit = {}): SheetSpec {
         val mine = refs.count { it.isLocal }
         return confirmSheet(
-            title = if (refs.size == 1) "Delete “${refs[0].title}”?" else "Delete ${refs.size} playlists?",
-            subtitle = if (mine > 0) "Songs you downloaded stay in your library" else "They can be saved again from search",
-            confirm = "Delete",
+            title = if (refs.size == 1) {
+                tr("Delete “${refs[0].title}”?", "Supprimer « ${refs[0].title} » ?")
+            } else {
+                tr("Delete ${refs.size} playlists?", "Supprimer ${refs.size} playlists ?")
+            },
+            subtitle = if (mine > 0) {
+                tr("Songs you downloaded stay in your library", "Les titres téléchargés restent dans votre bibliothèque")
+            } else {
+                tr("They can be saved again from search", "Vous pourrez les réenregistrer depuis la recherche")
+            },
+            confirm = tr("Delete", "Supprimer"),
         ) {
             Graph.library.removePlaylists(refs.map { it.url }.toSet())
-            Graph.toast(if (refs.size == 1) "Playlist deleted" else "${refs.size} playlists deleted")
+            Graph.toast(
+                if (refs.size == 1) tr("Playlist deleted", "Playlist supprimée")
+                else tr("${refs.size} playlists deleted", "${refs.size} playlists supprimées")
+            )
             onDone()
         }
     }
@@ -295,7 +364,7 @@ object Actions {
         subtitle = subtitle,
         actions = listOf(
             SheetAction(confirm, Ic.Delete, destructive = true, onClick = onConfirm),
-            SheetAction("Cancel", Ic.Close),
+            SheetAction(tr("Cancel", "Annuler"), Ic.Close),
         ),
     )
 
@@ -307,7 +376,7 @@ object Actions {
      */
     fun selectionSheet(
         tracks: List<Track>,
-        title: String = "${tracksLabel(tracks.size)} selected",
+        title: String = trCount(tracks.size, "track selected", "tracks selected", "titre sélectionné", "titres sélectionnés"),
         subtitle: String? = null,
         extra: List<SheetAction> = emptyList(),
         onDone: () -> Unit,
@@ -321,22 +390,33 @@ object Actions {
                     addAll(extra)
                     return@buildList
                 }
-                add(SheetAction("Play", Ic.PlaylistPlay) {
+                add(SheetAction(tr("Play", "Lire"), Ic.PlaylistPlay) {
                     Graph.player.playAll(tracks)
                     onDone()
                 })
-                add(SheetAction("Add next in queue", Ic.PlayNext) {
+                add(SheetAction(tr("Add next in queue", "Lire ensuite"), Ic.PlayNext) {
                     Graph.player.playNext(tracks)
-                    Graph.toast("${tracksLabel(tracks.size).replaceFirstChar { it.uppercase() }} after the current song")
+                    Graph.toast(
+                        tr(
+                            "${tracksLabel(tracks.size).replaceFirstChar { it.uppercase() }} after the current song",
+                            "Après le titre en cours : ${tracksLabel(tracks.size)}",
+                        )
+                    )
                     onDone()
                 })
-                add(SheetAction("Add to queue", Ic.Queue) {
+                add(SheetAction(tr("Add to queue", "Ajouter à la file"), Ic.Queue) {
                     Graph.player.enqueue(tracks)
                     onDone()
                 })
-                add(SheetAction("Add to playlist", Ic.PlaylistAdd, next = { addToPlaylistSheet(tracks) { onDone() } }))
+                add(
+                    SheetAction(
+                        tr("Add to playlist", "Ajouter à une playlist"),
+                        Ic.PlaylistAdd,
+                        next = { addToPlaylistSheet(tracks) { onDone() } },
+                    )
+                )
                 if (downloaded.size < tracks.size) {
-                    add(SheetAction("Download", Ic.Download) {
+                    add(SheetAction(tr("Download", "Télécharger"), Ic.Download) {
                         download(tracks)
                         onDone()
                     })
@@ -345,17 +425,31 @@ object Actions {
                 if (downloaded.isNotEmpty()) {
                     add(
                         SheetAction(
-                            if (downloaded.size == 1) "Delete download" else "Delete ${downloaded.size} downloads",
+                            if (downloaded.size == 1) {
+                                tr("Delete download", "Supprimer le téléchargement")
+                            } else {
+                                tr("Delete ${downloaded.size} downloads", "Supprimer ${downloaded.size} téléchargements")
+                            },
                             Ic.Delete,
                             destructive = true,
                             next = {
                                 confirmSheet(
-                                    title = if (downloaded.size == 1) "Delete this download?" else "Delete ${downloaded.size} downloads?",
-                                    subtitle = "They stay in your playlists and can still stream",
-                                    confirm = "Delete",
+                                    title = if (downloaded.size == 1) {
+                                        tr("Delete this download?", "Supprimer ce téléchargement ?")
+                                    } else {
+                                        tr("Delete ${downloaded.size} downloads?", "Supprimer ${downloaded.size} téléchargements ?")
+                                    },
+                                    subtitle = tr(
+                                        "They stay in your playlists and can still stream",
+                                        "Les titres restent dans vos playlists, lisibles en streaming",
+                                    ),
+                                    confirm = tr("Delete", "Supprimer"),
                                 ) {
                                     downloaded.forEach { Graph.library.deleteDownload(it.id) }
-                                    Graph.toast(if (downloaded.size == 1) "Download deleted" else "${downloaded.size} downloads deleted")
+                                    Graph.toast(
+                                        if (downloaded.size == 1) tr("Download deleted", "Téléchargement supprimé")
+                                        else tr("${downloaded.size} downloads deleted", "${downloaded.size} téléchargements supprimés")
+                                    )
                                     onDone()
                                 }
                             },

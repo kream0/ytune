@@ -16,6 +16,8 @@ import androidx.core.content.ContextCompat
 import app.ytune.Graph
 import app.ytune.MainActivity
 import app.ytune.R
+import app.ytune.tr
+import app.ytune.trCount
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -83,9 +85,13 @@ class DownloadService : Service() {
         val waiting = active.isNotEmpty() && active.all { it.status == DlStatus.WAITING_NETWORK }
         val current = running.firstOrNull()
         val title = when {
-            active.isEmpty() -> "Downloads finished"
-            waiting -> "Waiting for network · ${active.size} queued"
-            else -> "Downloading · ${active.size} left"
+            active.isEmpty() -> tr("Downloads finished", "Téléchargements terminés")
+            waiting -> tr(
+                "Waiting for network · ${active.size} queued",
+                "En attente du réseau · ${active.size} dans la file",
+            )
+            else -> tr("Downloading", "Téléchargement") + " · " +
+                trCount(active.size, "left", "left", "restant", "restants")
         }
         val openApp = PendingIntent.getActivity(
             this, 1,
@@ -100,13 +106,18 @@ class DownloadService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_download)
             .setContentTitle(title)
-            .setContentText(current?.let { "${it.track.title} — ${(it.progress * 100).toInt()}%" })
+            .setContentText(
+                current?.let {
+                    val percent = (it.progress * 100).toInt()
+                    tr("${it.track.title} — $percent%", "${it.track.title} — $percent %")
+                }
+            )
             .setProgress(100, ((current?.progress ?: 0f) * 100).toInt(), current == null || current.total <= 0)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setContentIntent(openApp)
-            .addAction(0, "Cancel all", cancelAll)
+            .addAction(0, tr("Cancel all", "Tout annuler"), cancelAll)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }

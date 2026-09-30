@@ -42,6 +42,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import app.ytune.tr
+import app.ytune.trCount
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
 import kotlinx.coroutines.delay
@@ -119,9 +121,14 @@ fun SelectionBar(
                 .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconBtn(Ic.Close, { selection.clear() }, tint = P.onInverse, contentDescription = "Cancel selection")
+            IconBtn(
+                Ic.Close,
+                { selection.clear() },
+                tint = P.onInverse,
+                contentDescription = tr("Cancel selection", "Annuler la sélection"),
+            )
             Text(
-                "${selection.size} SELECTED",
+                trCount(selection.size, "SELECTED", "SELECTED", "SÉLECTIONNÉ", "SÉLECTIONNÉS"),
                 style = Type.labelBold,
                 color = P.onInverse,
                 modifier = Modifier.weight(1f).padding(start = 4.dp),
@@ -134,10 +141,15 @@ fun SelectionBar(
                     .clickable(onClick = onSelectAll)
                     .padding(horizontal = 12.dp, vertical = 10.dp),
             ) {
-                Text(if (all) "NONE" else "ALL", style = Type.labelBold, color = P.onInverse)
+                Text(if (all) tr("NONE", "AUCUN") else tr("ALL", "TOUT"), style = Type.labelBold, color = P.onInverse)
             }
-            IconBtn(Ic.PlaylistAdd, onAddToPlaylist, tint = P.onInverse, contentDescription = "Add to playlist")
-            IconBtn(Ic.More, onMore, tint = P.onInverse, contentDescription = "More actions")
+            IconBtn(
+                Ic.PlaylistAdd,
+                onAddToPlaylist,
+                tint = P.onInverse,
+                contentDescription = tr("Add to playlist", "Ajouter à une playlist"),
+            )
+            IconBtn(Ic.More, onMore, tint = P.onInverse, contentDescription = tr("More actions", "Plus d'actions"))
         }
     }
 }
@@ -156,7 +168,7 @@ fun SelectMark(selected: Boolean, modifier: Modifier = Modifier) {
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            if (selected) Icon(Ic.Check, contentDescription = "Selected", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(15.dp))
+            if (selected) Icon(Ic.Check, contentDescription = tr("Selected", "Sélectionné"), tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(15.dp))
         }
     }
 }

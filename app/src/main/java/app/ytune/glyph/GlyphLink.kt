@@ -3,6 +3,7 @@ package app.ytune.glyph
 import android.content.ComponentName
 import android.content.Context
 import android.util.Log
+import app.ytune.tr
 import com.nothing.ketchum.GlyphMatrixManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,10 +70,12 @@ object GlyphLink {
         val app = context.applicationContext
         _status.update { it.copy(serviceFound = GlyphSupport.serviceInstalled(app), linking = true, error = null) }
         val m = runCatching { GlyphMatrixManager.getInstance(app) }
-            .onFailure { fail("SDK unavailable: ${it.message}") }
+            .onFailure { fail(tr("SDK unavailable: ${it.message}", "SDK indisponible : ${it.message}")) }
             .getOrNull() ?: return
         manager = m
-        runCatching { m.init(callback) }.onFailure { fail("Couldn't bind the Glyph service: ${it.message}") }
+        runCatching { m.init(callback) }.onFailure {
+            fail(tr("Couldn't bind the Glyph service: ${it.message}", "Connexion au service Glyph impossible : ${it.message}"))
+        }
     }
 
     fun release(owner: Any) {

@@ -36,6 +36,7 @@ import app.ytune.glyph.GlyphNowPlaying
 import app.ytune.glyph.GlyphSupport
 import app.ytune.glyph.NowPlayingInfo
 import app.ytune.lyrics.SameSong
+import app.ytune.tr
 import app.ytune.yt.YouTube
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -253,7 +254,12 @@ class PlaybackService : MediaSessionService() {
         consecutiveFailures++
 
         val reason = error.cause?.message ?: error.errorCodeName
-        Graph.toast("Can't play “${item.mediaMetadata.title}” — $reason")
+        Graph.toast(
+            tr(
+                "Can't play “${item.mediaMetadata.title}” — $reason",
+                "Impossible de lire « ${item.mediaMetadata.title} » — $reason",
+            )
+        )
 
         if (consecutiveFailures < 3 && player.hasNextMediaItem()) {
             player.seekToNextMediaItem()

@@ -9,6 +9,7 @@ import android.os.Message
 import android.os.Messenger
 import android.os.SystemClock
 import app.ytune.Graph
+import app.ytune.tr
 import com.nothing.ketchum.GlyphToy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,7 +64,7 @@ class NowPlayingToyService : Service() {
                 animator.run(
                     source = { Graph.nowPlaying.value },
                     output = { s.show(it) },
-                    idleLabel = if (touch) "YTUNE  ·  HOLD TO PLAY" else "YTUNE",
+                    idleLabel = if (touch) tr("YTUNE  ·  HOLD TO PLAY", "YTUNE  ·  APPUI LONG POUR LIRE") else "YTUNE",
                     scrollWhenPaused = touch,
                 )
             }

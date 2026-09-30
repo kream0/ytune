@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.ytune.Graph
 import app.ytune.data.PlaylistRef
 import app.ytune.playback.PlayerUiState
+import app.ytune.tr
 import app.ytune.ui.components.Artwork
 import app.ytune.ui.components.DlSnapshot
 import app.ytune.ui.components.DotGlyphs
@@ -85,11 +86,11 @@ fun AppRoot(app: AppViewModel) {
         if (Graph.updater.dismissedVersion == ready.remote.versionCode || activity == null) return@LaunchedEffect
         Graph.updater.dismissedVersion = ready.remote.versionCode
         sheet = SheetSpec(
-            title = "Update ready · v${ready.remote.versionName}",
-            subtitle = ready.remote.headline ?: "A new YTune release is downloaded",
+            title = tr("Update ready · v${ready.remote.versionName}", "Mise à jour prête · v${ready.remote.versionName}"),
+            subtitle = ready.remote.headline ?: tr("A new YTune release is downloaded", "Une nouvelle version de YTune est téléchargée"),
             actions = listOf(
-                SheetAction("Install now", Ic.Download) { Graph.updater.install(activity) },
-                SheetAction("Later", Ic.Close) {},
+                SheetAction(tr("Install now", "Installer maintenant"), Ic.Download) { Graph.updater.install(activity) },
+                SheetAction(tr("Later", "Plus tard"), Ic.Close) {},
             ),
         )
     }

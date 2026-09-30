@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.ytune.Graph
 import app.ytune.data.StreamMode
+import app.ytune.tr
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
 
@@ -229,8 +230,13 @@ fun ModeChip(onOptions: () -> Unit, modifier: Modifier = Modifier) {
                     Graph.settings.update {
                         it.copy(mode = if (on) StreamMode.STREAM else StreamMode.STREAM_AND_DOWNLOAD)
                     }
+                    val strategy = Graph.settings.current.strategy.label.lowercase()
                     Graph.toast(
-                        if (on) "Stream only" else "Stream + download · ${Graph.settings.current.strategy.label.lowercase()}"
+                        if (on) {
+                            tr("Stream only", "Streaming uniquement")
+                        } else {
+                            tr("Stream + download · $strategy", "Streaming + téléchargement · $strategy")
+                        }
                     )
                 }
                 .padding(start = 12.dp, end = 8.dp)
@@ -249,7 +255,7 @@ fun ModeChip(onOptions: () -> Unit, modifier: Modifier = Modifier) {
                 .height(36.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Ic.ChevronDown, contentDescription = "Mode options", tint = P.textDim, modifier = Modifier.size(18.dp))
+            Icon(Ic.ChevronDown, contentDescription = tr("Mode options", "Options du mode"), tint = P.textDim, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -259,7 +265,7 @@ fun ModeChip(onOptions: () -> Unit, modifier: Modifier = Modifier) {
 fun ModeOptions() {
     val settings by Graph.settings.state.collectAsStateWithLifecycle()
     Column {
-        Text("Playback", style = Type.label, color = P.textDim)
+        Text(tr("Playback", "Lecture"), style = Type.label, color = P.textDim)
         Spacer(Modifier.height(8.dp))
         Segmented(
             options = StreamMode.entries.map { it.label },
@@ -267,7 +273,7 @@ fun ModeOptions() {
             onSelect = { i -> Graph.settings.update { it.copy(mode = StreamMode.entries[i]) } },
         )
         Spacer(Modifier.height(18.dp))
-        Text("Download strategy", style = Type.label, color = P.textDim)
+        Text(tr("Download strategy", "Stratégie de téléchargement"), style = Type.label, color = P.textDim)
         Spacer(Modifier.height(8.dp))
         Segmented(
             options = app.ytune.data.DownloadStrategy.entries.map { it.label },
@@ -277,7 +283,10 @@ fun ModeOptions() {
         Spacer(Modifier.height(10.dp))
         Text(
             if (settings.downloadWhileStreaming) settings.strategy.description
-            else "Stream only: nothing is saved unless you tap Download.",
+            else tr(
+                "Stream only: nothing is saved unless you tap Download.",
+                "Streaming uniquement : rien n'est enregistré, sauf si vous appuyez sur Télécharger.",
+            ),
             style = Type.body,
             color = P.textDim,
         )

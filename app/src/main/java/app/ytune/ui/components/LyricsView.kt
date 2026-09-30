@@ -55,6 +55,7 @@ import app.ytune.data.Track
 import app.ytune.lyrics.LyricLine
 import app.ytune.lyrics.Lyrics
 import app.ytune.lyrics.LyricsResult
+import app.ytune.tr
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
 import kotlinx.coroutines.delay
@@ -93,13 +94,22 @@ fun LyricsView(track: Track, onTap: () -> Unit, modifier: Modifier = Modifier) {
             LyricsUi.Loading -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 DotLoader()
                 Spacer(Modifier.height(12.dp))
-                Text("LOOKING FOR LYRICS", style = Type.label, color = P.textDim)
+                Text(tr("LOOKING FOR LYRICS", "RECHERCHE DES PAROLES"), style = Type.label, color = P.textDim)
             }
-            LyricsUi.Offline -> Message("NO CONNECTION", "Lyrics need the internet the first time.") {
-                PillButton("Retry", { attempt++ }, icon = Ic.Refresh)
+            LyricsUi.Offline -> Message(
+                tr("NO CONNECTION", "PAS DE CONNEXION"),
+                tr("Lyrics need the internet the first time.", "Les paroles nécessitent Internet la première fois."),
+            ) {
+                PillButton(tr("Retry", "Réessayer"), { attempt++ }, icon = Ic.Refresh)
             }
             is LyricsUi.Ready -> when (val r = s.result) {
-                LyricsResult.Missing -> Message("NO LYRICS", "None found for this song. Tap to show the cover.")
+                LyricsResult.Missing -> Message(
+                    tr("NO LYRICS", "PAS DE PAROLES"),
+                    tr(
+                        "None found for this song. Tap to show the cover.",
+                        "Aucune parole trouvée pour ce titre. Appuyez pour afficher la pochette.",
+                    ),
+                )
                 LyricsResult.Instrumental -> Message("♪ ♪ ♪", "Instrumental")
                 is LyricsResult.Found ->
                     if (r.lyrics.synced) SyncedLyrics(r.lyrics, onTap) else PlainLyrics(r.lyrics, onTap)
@@ -265,7 +275,7 @@ private fun PlainLyrics(lyrics: Lyrics, onTap: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 36.dp)) {
             item(key = "label") {
                 Text(
-                    "NOT SYNCED",
+                    tr("NOT SYNCED", "NON SYNCHRONISÉES"),
                     style = Type.label,
                     color = P.textFaint,
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp),

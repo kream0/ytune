@@ -5,6 +5,7 @@ import app.ytune.data.AppJson
 import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
 import app.ytune.lyrics.SameSong
+import app.ytune.tr
 import app.ytune.yt.PlaylistResult
 import app.ytune.yt.SearchFilter
 import app.ytune.yt.SongResult
@@ -73,7 +74,7 @@ class AlbumFinder(private val http: OkHttpClient) {
         val album = (fromYouTube ?: AlbumMatch.pickRelease(catalog, song.title, song.artist, track.durationSec))
             ?.let { a -> if (a.tracks != null) a else a.copy(tracks = AlbumMatch.trackCountOf(catalog, a)) }
         if (album == null) {
-            if (!reached) throw IOException("Couldn't reach YouTube")
+            if (!reached) throw IOException(tr("Couldn't reach YouTube", "YouTube injoignable"))
             return@withContext AlbumResult.Unknown.also { cache[track.id] = it }
         }
 

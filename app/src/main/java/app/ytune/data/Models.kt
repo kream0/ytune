@@ -1,5 +1,6 @@
 package app.ytune.data
 
+import app.ytune.tr
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.Locale
@@ -81,8 +82,8 @@ fun formatMs(ms: Long): String {
 }
 
 fun formatBytes(bytes: Long): String {
-    if (bytes <= 0) return "0 MB"
+    if (bytes <= 0) return tr("0 MB", "0 Mo")
     val mb = bytes / (1024.0 * 1024.0)
-    return if (mb >= 1024) String.format(Locale.US, "%.2f GB", mb / 1024)
-    else String.format(Locale.US, "%.1f MB", mb)
+    return if (mb >= 1024) tr(String.format(Locale.US, "%.2f GB", mb / 1024), String.format(Locale.FRANCE, "%.2f Go", mb / 1024))
+    else tr(String.format(Locale.US, "%.1f MB", mb), String.format(Locale.FRANCE, "%.1f Mo", mb))
 }

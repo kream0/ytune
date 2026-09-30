@@ -20,6 +20,7 @@ import app.ytune.data.Library
 import app.ytune.data.Settings
 import app.ytune.download.DownloadManager
 import app.ytune.download.GrowingFile
+import app.ytune.tr
 import app.ytune.yt.YouTube
 import java.io.File
 import java.io.IOException
@@ -149,7 +150,8 @@ class GrowingFileDataSource(private val lookup: (String) -> GrowingFile?) : Base
     override fun open(dataSpec: DataSpec): Long {
         uri = dataSpec.uri
         val id = dataSpec.uri.lastPathSegment ?: throw IOException("Malformed uri")
-        val g = lookup(id)?.takeIf { !it.failed } ?: throw IOException("Download not running")
+        val g = lookup(id)?.takeIf { !it.failed }
+            ?: throw IOException(tr("Download not running", "Téléchargement interrompu"))
         transferInitializing(dataSpec)
         growing = g
         file = RandomAccessFile(g.file, "r").also { it.seek(dataSpec.position) }
@@ -172,12 +174,12 @@ class GrowingFileDataSource(private val lookup: (String) -> GrowingFile?) : Base
         var lastChange = SystemClock.elapsedRealtime()
         while (g.written <= position) {
             if (g.done) return C.RESULT_END_OF_INPUT
-            if (g.failed) throw IOException("Download failed")
+            if (g.failed) throw IOException(tr("Download failed", "Échec du téléchargement"))
             if (g.written != lastWritten) {
                 lastWritten = g.written
                 lastChange = SystemClock.elapsedRealtime()
             } else if (SystemClock.elapsedRealtime() - lastChange > STALL_MS) {
-                throw IOException("Download stalled")
+                throw IOException(tr("Download stalled", "Téléchargement bloqué"))
             }
             sleepOrThrow()
         }

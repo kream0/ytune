@@ -2,6 +2,7 @@ package app.ytune.glyph
 
 import android.content.Context
 import android.os.SystemClock
+import app.ytune.tr
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +31,7 @@ object GlyphTest {
                 animator.run(
                     source = { null },
                     output = { session.show(it) },
-                    idleLabel = "YTUNE  ·  GLYPH TEST",
+                    idleLabel = tr("YTUNE  ·  GLYPH TEST", "YTUNE  ·  TEST GLYPH"),
                     scrollWhenPaused = true,
                 )
             }

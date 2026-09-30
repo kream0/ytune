@@ -17,6 +17,7 @@ import app.ytune.glyph.GlyphAnimator
 import app.ytune.glyph.MatrixRenderer
 import app.ytune.glyph.NowPlayingInfo
 import app.ytune.glyph.Raster
+import app.ytune.tr
 import app.ytune.ui.theme.P
 
 /** On-screen replica of the Glyph Matrix, driven by the exact same renderer as the LEDs. */
@@ -27,7 +28,7 @@ fun GlyphMatrixPreview(matrix: Int, modifier: Modifier = Modifier, dotColor: Col
     val sample = remember {
         NowPlayingInfo(
             id = "sample",
-            title = "Nothing playing",
+            title = tr("Nothing playing", "Rien en lecture"),
             artist = "YTune",
             isPlaying = true,
             positionMs = 0,

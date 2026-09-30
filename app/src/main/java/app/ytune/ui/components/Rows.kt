@@ -40,6 +40,8 @@ import app.ytune.data.formatDuration
 import app.ytune.data.isLocal
 import app.ytune.download.DlStatus
 import app.ytune.download.DlTask
+import app.ytune.tr
+import app.ytune.trCount
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
 import coil.compose.AsyncImage
@@ -212,7 +214,7 @@ fun TrackRow(
         } else {
             trailing?.invoke()
             if (onMore != null) {
-                IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+                IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = tr("More", "Plus d'options"))
             }
         }
     }
@@ -230,7 +232,9 @@ fun DragHandle(handle: Modifier, active: Boolean, enabled: Boolean = true) {
         else -> P.textFaint.copy(alpha = 0.4f)
     }
     Box(
-        handle.size(width = 40.dp, height = 52.dp).semantics { contentDescription = "Drag to reorder" },
+        handle
+            .size(width = 40.dp, height = 52.dp)
+            .semantics { contentDescription = tr("Drag to reorder", "Faire glisser pour réorganiser") },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(width = 9.dp, height = 15.dp)) {
@@ -281,13 +285,13 @@ fun PlaylistRow(
             val parts = buildList {
                 add(
                     when {
-                        ref.isLocal -> "MY PLAYLIST"
+                        ref.isLocal -> tr("MY PLAYLIST", "MA PLAYLIST")
                         ref.isAlbum -> "ALBUM"
                         else -> "PLAYLIST"
                     }
                 )
                 if (ref.uploader.isNotBlank()) add(ref.uploader.uppercase())
-                if (ref.count >= 0) add("${ref.count} TRACKS")
+                if (ref.count >= 0) add(trCount(ref.count, "TRACK", "TRACKS", "TITRE", "TITRES"))
                 if (extra != null) add(extra)
             }
             Text(
@@ -301,8 +305,15 @@ fun PlaylistRow(
         if (selected != null) {
             SelectMark(selected)
         } else {
-            IconBtn(Ic.PlaylistAdd, onAddAll, bordered = true, size = 38.dp, iconSize = 20.dp, contentDescription = "Add whole playlist to queue")
-            IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+            IconBtn(
+                Ic.PlaylistAdd,
+                onAddAll,
+                bordered = true,
+                size = 38.dp,
+                iconSize = 20.dp,
+                contentDescription = tr("Add whole playlist to queue", "Ajouter toute la playlist à la file"),
+            )
+            IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = tr("More", "Plus d'options"))
         }
     }
 }

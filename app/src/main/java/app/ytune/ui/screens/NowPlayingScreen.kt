@@ -61,6 +61,8 @@ import app.ytune.data.Track
 import app.ytune.data.formatBytes
 import app.ytune.data.formatMs
 import app.ytune.playback.PlayerUiState
+import app.ytune.tr
+import app.ytune.trCount
 import app.ytune.ui.Actions
 import app.ytune.ui.components.DlBadge
 import app.ytune.ui.components.DotGlyphs
@@ -111,9 +113,13 @@ fun NowPlayingScreen(onClose: () -> Unit) {
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconBtn(Ic.ChevronDown, onClose, contentDescription = "Close")
+            IconBtn(Ic.ChevronDown, onClose, contentDescription = tr("Close", "Fermer"))
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (showQueue) "QUEUE" else "NOW PLAYING", style = Type.labelBold, color = P.accent)
+                Text(
+                    if (showQueue) tr("QUEUE", "FILE D'ATTENTE") else tr("NOW PLAYING", "EN LECTURE"),
+                    style = Type.labelBold,
+                    color = P.accent,
+                )
                 if (state.queue.isNotEmpty()) {
                     Text(
                         "${state.currentIndex + 1} / ${state.queue.size}",
@@ -126,14 +132,14 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 Ic.Queue,
                 { showQueue = !showQueue },
                 tint = if (showQueue) P.accent else P.text,
-                contentDescription = "Queue",
+                contentDescription = tr("Queue", "File d'attente"),
             )
         }
 
         val track = state.current
         if (track == null) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text("NOTHING PLAYING", style = Type.displaySmall, color = P.textFaint)
+                Text(tr("NOTHING PLAYING", "RIEN EN LECTURE"), style = Type.displaySmall, color = P.textFaint)
             }
         } else {
             Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -199,7 +205,11 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ModeChip(onOptions = { sheets(SheetSpec(title = "Playback mode", content = { ModeOptions() })) })
+                ModeChip(
+                    onOptions = {
+                        sheets(SheetSpec(title = tr("Playback mode", "Mode de lecture"), content = { ModeOptions() }))
+                    },
+                )
                 Spacer(Modifier.weight(1f))
                 SaveStatusChip(track)
             }
@@ -239,7 +249,12 @@ private fun CoverArt(url: String?, mode: ArtMode, playing: Boolean, modifier: Mo
 private fun ModeTabs(current: ArtMode, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         ArtMode.entries.forEach { m ->
-            Text(m.name, style = Type.label, color = if (m == current) P.text else P.textFaint)
+            val label = when (m) {
+                ArtMode.DOTS -> tr("DOTS", "POINTS")
+                ArtMode.PHOTO -> tr("PHOTO", "PHOTO")
+                ArtMode.LYRICS -> tr("LYRICS", "PAROLES")
+            }
+            Text(label, style = Type.label, color = if (m == current) P.text else P.textFaint)
         }
     }
 }
@@ -270,7 +285,12 @@ private fun TitleBlock(track: Track) {
             )
         }
         // Go to album, add to playlist, download… for the song that's playing.
-        IconBtn(Ic.More, { sheets(Actions.trackSheet(track)) }, tint = P.textDim, contentDescription = "More")
+        IconBtn(
+            Ic.More,
+            { sheets(Actions.trackSheet(track)) },
+            tint = P.textDim,
+            contentDescription = tr("More", "Plus d'options"),
+        )
     }
 }
 
@@ -311,7 +331,7 @@ private fun Transport(state: PlayerUiState) {
             Ic.Shuffle,
             { Graph.player.toggleShuffle() },
             tint = if (state.shuffle) P.accent else P.textDim,
-            contentDescription = "Shuffle",
+            contentDescription = tr("Shuffle", "Aléatoire"),
         )
         Box(
             Modifier.size(56.dp).clip(CircleShape).clickable { Graph.player.previous() },
@@ -346,7 +366,7 @@ private fun Transport(state: PlayerUiState) {
             if (state.repeatMode == Player.REPEAT_MODE_ONE) Ic.RepeatOne else Ic.Repeat,
             { Graph.player.cycleRepeat() },
             tint = if (state.repeatMode == Player.REPEAT_MODE_OFF) P.textDim else P.accent,
-            contentDescription = "Repeat",
+            contentDescription = tr("Repeat", "Répéter"),
         )
     }
 }
@@ -361,26 +381,38 @@ private class ChipSpec(val color: Color, val label: String, val labelColor: Colo
 private fun SaveStatusChip(track: Track) {
     val badge = LocalDl.current.badge(track.id)
     val spec = when (badge) {
-        DlBadge.Done -> ChipSpec(P.saveGreen, "OFFLINE", P.saveGreen) {
+        DlBadge.Done -> ChipSpec(P.saveGreen, tr("OFFLINE", "HORS LIGNE"), P.saveGreen) {
             val size = Graph.library.localAudio(track.id)?.sizeBytes ?: 0L
-            Graph.toast("Saved on this phone · ${formatBytes(size)} · plays without a connection")
+            Graph.toast(
+                tr(
+                    "Saved on this phone · ${formatBytes(size)} · plays without a connection",
+                    "Enregistré sur ce téléphone · ${formatBytes(size)} · lecture sans connexion",
+                )
+            )
         }
         is DlBadge.Running -> ChipSpec(
             P.saveColor(badge.progress),
-            "SAVING ${(badge.progress * 100).toInt()}%",
+            tr("SAVING ${(badge.progress * 100).toInt()}%", "ENREGISTREMENT ${(badge.progress * 100).toInt()} %"),
             P.text,
         ) {}
-        DlBadge.Queued -> ChipSpec(P.saveRed, "QUEUED", P.text) {}
+        DlBadge.Queued -> ChipSpec(P.saveRed, tr("QUEUED", "EN ATTENTE"), P.text) {}
         is DlBadge.Waiting -> ChipSpec(
             P.saveRed,
-            if (badge.wifiOnly) "WAITING FOR WI-FI" else "WAITING FOR NETWORK",
+            if (badge.wifiOnly) tr("WAITING FOR WI-FI", "ATTENTE DU WI-FI") else tr("WAITING FOR NETWORK", "ATTENTE DU RÉSEAU"),
             P.text,
         ) {}
-        is DlBadge.Failed -> ChipSpec(P.saveRed, "FAILED · RETRY", P.saveRed) {
+        is DlBadge.Failed -> ChipSpec(P.saveRed, tr("FAILED · RETRY", "ÉCHEC · RÉESSAYER"), P.saveRed) {
             Graph.downloads.retry(track.id)
-            Graph.toast("Retrying: ${badge.error ?: "download"}")
+            Graph.toast(
+                tr(
+                    "Retrying: ${badge.error ?: "download"}",
+                    "Nouvelle tentative : ${badge.error ?: "téléchargement"}",
+                )
+            )
         }
-        DlBadge.None -> ChipSpec(P.outline, "STREAMING · SAVE", P.textDim) { Actions.download(listOf(track)) }
+        DlBadge.None -> ChipSpec(P.outline, tr("STREAMING · SAVE", "STREAMING · ENREGISTRER"), P.textDim) {
+            Actions.download(listOf(track))
+        }
     }
     Row(
         Modifier
@@ -481,18 +513,29 @@ private fun QueueList(state: PlayerUiState) {
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("${state.queue.size} TRACKS", style = Type.label, color = P.textDim, modifier = Modifier.weight(1f))
+                    Text(
+                        trCount(state.queue.size, "TRACK", "TRACKS", "TITRE", "TITRES"),
+                        style = Type.label,
+                        color = P.textDim,
+                        modifier = Modifier.weight(1f),
+                    )
                     IconBtn(
                         Ic.PlaylistAdd,
                         { sheets(Actions.newPlaylistSheet(state.queue)) },
                         bordered = true,
                         size = 44.dp,
-                        contentDescription = "Save queue as playlist",
+                        contentDescription = tr("Save queue as playlist", "Enregistrer la file en playlist"),
                     )
                     Spacer(Modifier.width(8.dp))
-                    IconBtn(Ic.Download, { Actions.download(state.queue) }, bordered = true, size = 44.dp, contentDescription = "Download all")
+                    IconBtn(
+                        Ic.Download,
+                        { Actions.download(state.queue) },
+                        bordered = true,
+                        size = 44.dp,
+                        contentDescription = tr("Download all", "Tout télécharger"),
+                    )
                     Spacer(Modifier.width(8.dp))
-                    PillButton("Clear", { Graph.player.clearQueue() }, icon = Ic.Delete)
+                    PillButton(tr("Clear", "Vider"), { Graph.player.clearQueue() }, icon = Ic.Delete)
                 }
             }
             item(key = "autoplay") {
@@ -501,9 +544,16 @@ private fun QueueList(state: PlayerUiState) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("AUTOPLAY", style = Type.labelBold, color = P.text)
+                        Text(tr("AUTOPLAY", "LECTURE AUTO"), style = Type.labelBold, color = P.text)
                         Text(
-                            if (settings.autoplay) "Suggestions keep playing when the queue ends" else "Stops when the queue ends",
+                            if (settings.autoplay) {
+                                tr(
+                                    "Suggestions keep playing when the queue ends",
+                                    "Des suggestions prennent le relais à la fin de la file",
+                                )
+                            } else {
+                                tr("Stops when the queue ends", "La lecture s'arrête à la fin de la file")
+                            },
                             style = Type.label,
                             color = P.textDim,
                         )
@@ -515,7 +565,7 @@ private fun QueueList(state: PlayerUiState) {
                 if (entry.key == firstSuggestedKey) {
                     item(key = "suggested-header") {
                         SectionLabel(
-                            "Suggested · autoplay",
+                            tr("Suggested · autoplay", "Suggestions · lecture auto"),
                             Modifier.animateItem().padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp),
                         )
                     }
@@ -560,11 +610,15 @@ private fun QueueList(state: PlayerUiState) {
                                         Actions.trackSheet(
                                             track,
                                             extra = buildList {
-                                                if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.player.move(index, index - 1) })
+                                                if (index > 0) add(SheetAction(tr("Move up", "Monter"), Ic.ChevronUp) { Graph.player.move(index, index - 1) })
                                                 if (index < state.queue.size - 1) {
-                                                    add(SheetAction("Move down", Ic.ChevronDown) { Graph.player.move(index, index + 1) })
+                                                    add(SheetAction(tr("Move down", "Descendre"), Ic.ChevronDown) { Graph.player.move(index, index + 1) })
                                                 }
-                                                add(SheetAction("Remove from queue", Ic.Close, destructive = true) { Graph.player.removeAt(index) })
+                                                add(
+                                                    SheetAction(tr("Remove from queue", "Retirer de la file"), Ic.Close, destructive = true) {
+                                                        Graph.player.removeAt(index)
+                                                    }
+                                                )
                                             },
                                         )
                                     )
@@ -591,7 +645,7 @@ private fun QueueList(state: PlayerUiState) {
                     Actions.selectionSheet(
                         chosen(),
                         extra = listOf(
-                            SheetAction("Remove from queue", Ic.Close, destructive = true) {
+                            SheetAction(tr("Remove from queue", "Retirer de la file"), Ic.Close, destructive = true) {
                                 Graph.player.removeAll(indices)
                                 done()
                             },

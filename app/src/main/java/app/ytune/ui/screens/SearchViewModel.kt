@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.ytune.Graph
 import app.ytune.data.PlaylistRef
+import app.ytune.tr
 import app.ytune.yt.ResultItem
 import app.ytune.yt.SearchFilter
 import app.ytune.yt.SearchPager
@@ -106,7 +107,7 @@ class SearchViewModel : ViewModel() {
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        SearchUi(query = q, error = e.message ?: "Couldn't open that link")
+                        SearchUi(query = q, error = e.message ?: tr("Couldn't open that link", "Impossible d'ouvrir ce lien"))
                     }
                 }
                 return
@@ -125,7 +126,7 @@ class SearchViewModel : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                SearchUi(query = q, error = e.message ?: "Search failed")
+                SearchUi(query = q, error = e.message ?: tr("Search failed", "Échec de la recherche"))
             }
         }
     }

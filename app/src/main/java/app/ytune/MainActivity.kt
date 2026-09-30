@@ -42,10 +42,13 @@ class MainActivity : ComponentActivity() {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         if (savedInstanceState == null) handleIntent(intent)
+        val language = Graph.settings.current.language
         setContent {
             val settings by Graph.settings.state.collectAsStateWithLifecycle()
             val dark = isDark(settings.theme, isSystemInDarkTheme())
             LaunchedEffect(dark) { applySystemBars(dark) }
+            // UI text is read in the chosen language (see tr()): start over in the new one.
+            LaunchedEffect(settings.language) { if (settings.language != language) recreate() }
             YTuneTheme(dark) {
                 AppRoot(appViewModel)
             }

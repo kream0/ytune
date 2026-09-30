@@ -12,6 +12,7 @@ import androidx.media3.session.SessionToken
 import app.ytune.Graph
 import app.ytune.data.AppJson
 import app.ytune.data.Track
+import app.ytune.tr
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -219,10 +220,17 @@ class PlayerConnection(private val context: Context) {
         val queued = fresh.size + replayed
         Graph.toast(
             when {
-                queued == 0 -> if (unique.size == 1) "Already in the queue" else "All already in the queue"
-                skipped > 0 -> "Added $queued · $skipped already in the queue"
-                unique.size == 1 -> "Added to queue"
-                else -> "Added $queued tracks to the queue"
+                queued == 0 -> if (unique.size == 1) {
+                    tr("Already in the queue", "Déjà dans la file d'attente")
+                } else {
+                    tr("All already in the queue", "Déjà tous dans la file d'attente")
+                }
+                skipped > 0 -> tr(
+                    "Added $queued · $skipped already in the queue",
+                    "${if (queued == 1) "1 ajouté" else "$queued ajoutés"} · $skipped déjà dans la file d'attente",
+                )
+                unique.size == 1 -> tr("Added to queue", "Ajouté à la file d'attente")
+                else -> tr("Added $queued tracks to the queue", "$queued titres ajoutés à la file d'attente")
             }
         )
     }

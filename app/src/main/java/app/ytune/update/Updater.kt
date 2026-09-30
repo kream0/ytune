@@ -15,6 +15,7 @@ import app.ytune.Graph
 import app.ytune.MainActivity
 import app.ytune.data.AppJson
 import app.ytune.data.Settings
+import app.ytune.tr
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +83,7 @@ class Updater(
     private var job: Job? = null
 
     val currentVersion: String
-        get() = if (BuildConfig.VERSION_NAME.contains("dev")) "test build #${BuildConfig.VERSION_CODE}"
+        get() = if (BuildConfig.VERSION_NAME.contains("dev")) tr("test build #${BuildConfig.VERSION_CODE}", "version de test #${BuildConfig.VERSION_CODE}")
         else "v${BuildConfig.VERSION_NAME}"
     val lastChecked: Long get() = prefs.getLong(KEY_LAST_CHECK, 0)
 
@@ -117,14 +118,14 @@ class Updater(
             } catch (e: Exception) {
                 Log.w(TAG, "update check failed", e)
                 // A silent check that fails (e.g. offline) keeps what we already knew, like a ready update.
-                _state.value = if (manual) UpdateState.Failed(e.message ?: "Couldn't reach GitHub") else previous
+                _state.value = if (manual) UpdateState.Failed(e.message ?: tr("Couldn't reach GitHub", "Impossible de joindre GitHub")) else previous
                 return@launch
             }
             prefs.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
 
             if (remote.versionCode <= BuildConfig.VERSION_CODE) {
                 _state.value = UpdateState.UpToDate
-                if (manual) Graph.toast("You're on the latest build")
+                if (manual) Graph.toast(tr("You're on the latest build", "Vous avez déjà la dernière version"))
                 return@launch
             }
             existingDownload(remote)?.let {
@@ -152,7 +153,7 @@ class Updater(
                 val request = Request.Builder().url(url).cacheControl(CacheControl.FORCE_NETWORK).build()
                 http.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                    val body = response.body ?: throw IOException("Empty download")
+                    val body = response.body ?: throw IOException(tr("Empty download", "Téléchargement vide"))
                     val total = body.contentLength().takeIf { it > 0 } ?: remote.size
                     val digest = MessageDigest.getInstance("SHA-256")
                     val part = File(dir, target.name + ".part")
@@ -178,10 +179,15 @@ class Updater(
                     val sha = digest.digest().joinToString("") { "%02x".format(it) }
                     if (remote.sha256.isNotBlank() && !sha.equals(remote.sha256, ignoreCase = true)) {
                         part.delete()
-                        throw IOException("Checksum mismatch (the release may have changed mid-download)")
+                        throw IOException(
+                            tr(
+                                "Checksum mismatch (the release may have changed mid-download)",
+                                "Somme de contrôle incorrecte (la version a peut-être changé pendant le téléchargement)",
+                            )
+                        )
                     }
                     target.delete()
-                    if (!part.renameTo(target)) throw IOException("Couldn't save the update")
+                    if (!part.renameTo(target)) throw IOException(tr("Couldn't save the update", "Impossible d'enregistrer la mise à jour"))
                 }
             }
             _state.value = UpdateState.Ready(remote, target)
@@ -189,7 +195,7 @@ class Updater(
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "update download failed", e)
-            _state.value = UpdateState.Failed(e.message ?: "Download failed")
+            _state.value = UpdateState.Failed(e.message ?: tr("Download failed", "Échec du téléchargement"))
         }
     }
 
@@ -201,7 +207,12 @@ class Updater(
         val ready = _state.value as? UpdateState.Ready ?: return
         val pm = activity.packageManager
         if (!pm.canRequestPackageInstalls()) {
-            Graph.toast("Allow YTune to install updates, then tap Install again")
+            Graph.toast(
+                tr(
+                    "Allow YTune to install updates, then tap Install again",
+                    "Autorisez YTune à installer des mises à jour, puis appuyez à nouveau sur Installer",
+                )
+            )
             activity.startActivity(
                 Intent(AndroidSettings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}"))
             )
@@ -233,7 +244,7 @@ class Updater(
             }
         } catch (e: Exception) {
             Log.w(TAG, "install failed", e)
-            Graph.toast("Couldn't start the installer: ${e.message}")
+            Graph.toast(tr("Couldn't start the installer: ${e.message}", "Impossible de lancer l'installateur : ${e.message}"))
         }
     }
 
@@ -245,10 +256,10 @@ class Updater(
                     ?.let { activity.startActivity(it) }
             }
             PackageInstaller.STATUS_SUCCESS -> Unit // we're being replaced
-            PackageInstaller.STATUS_FAILURE_ABORTED -> Graph.toast("Update cancelled")
+            PackageInstaller.STATUS_FAILURE_ABORTED -> Graph.toast(tr("Update cancelled", "Mise à jour annulée"))
             else -> {
-                val msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "unknown error"
-                Graph.toast("Update failed: $msg")
+                val msg = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: tr("unknown error", "erreur inconnue")
+                Graph.toast(tr("Update failed: $msg", "Échec de la mise à jour : $msg"))
             }
         }
     }
@@ -259,9 +270,9 @@ class Updater(
             .cacheControl(CacheControl.FORCE_NETWORK)
             .build()
         http.newCall(request).execute().use { response ->
-            if (response.code == 404) throw IOException("No release published yet")
+            if (response.code == 404) throw IOException(tr("No release published yet", "Aucune version publiée pour l'instant"))
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            val text = response.body?.string() ?: throw IOException("Empty response")
+            val text = response.body?.string() ?: throw IOException(tr("Empty response", "Réponse vide"))
             return AppJson.decodeFromString(RemoteVersion.serializer(), text)
         }
     }

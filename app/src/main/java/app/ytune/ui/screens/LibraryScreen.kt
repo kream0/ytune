@@ -28,6 +28,8 @@ import app.ytune.Graph
 import app.ytune.data.formatBytes
 import app.ytune.download.DlStatus
 import app.ytune.download.DlTask
+import app.ytune.tr
+import app.ytune.trCount
 import app.ytune.ui.Actions
 import app.ytune.ui.AppViewModel
 import app.ytune.ui.LibraryPage
@@ -65,7 +67,7 @@ fun LibraryScreen(app: AppViewModel) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            ScreenHeader("LIBRARY") {
+            ScreenHeader(tr("LIBRARY", "BIBLIOTHÈQUE")) {
                 Text(
                     formatBytes(Graph.library.totalBytes(library)),
                     style = Type.label,
@@ -75,9 +77,9 @@ fun LibraryScreen(app: AppViewModel) {
             }
             Segmented(
                 options = listOf(
-                    "SONGS ${downloaded.size}",
+                    tr("SONGS ${downloaded.size}", "TITRES ${downloaded.size}"),
                     "PLAYLISTS ${library.playlists.size}",
-                    "QUEUE ${taskList.count { it.isActive }}",
+                    tr("QUEUE ${taskList.count { it.isActive }}", "FILE ${taskList.count { it.isActive }}"),
                 ),
                 selected = app.libraryPage.ordinal,
                 onSelect = { app.libraryPage = LibraryPage.entries[it] },
@@ -89,8 +91,11 @@ fun LibraryScreen(app: AppViewModel) {
                 LibraryPage.SONGS -> {
                     if (downloaded.isEmpty()) {
                         EmptyState(
-                            "OFFLINE: 0",
-                            "Download songs from search, or switch on STREAM + DL and your library fills up as you listen.",
+                            tr("OFFLINE: 0", "HORS LIGNE : 0"),
+                            tr(
+                                "Download songs from search, or switch on STREAM + DL and your library fills up as you listen.",
+                                "Téléchargez des titres depuis la recherche, ou activez STREAM + DL pour remplir votre bibliothèque au fil de vos écoutes.",
+                            ),
                         )
                     } else {
                         val tracks = downloaded.map { it.first }
@@ -101,8 +106,8 @@ fun LibraryScreen(app: AppViewModel) {
                                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    PillButton("Play all", { Graph.player.playAll(tracks) }, icon = Ic.PlaylistPlay, style = PillStyle.Filled)
-                                    PillButton("Shuffle", { Graph.player.playAll(tracks, shuffle = true) }, icon = Ic.Shuffle)
+                                    PillButton(tr("Play all", "Tout lire"), { Graph.player.playAll(tracks) }, icon = Ic.PlaylistPlay, style = PillStyle.Filled)
+                                    PillButton(tr("Shuffle", "Aléatoire"), { Graph.player.playAll(tracks, shuffle = true) }, icon = Ic.Shuffle)
                                 }
                             }
                             items(downloaded, key = { it.first.id }) { (track, audio) ->
@@ -121,7 +126,7 @@ fun LibraryScreen(app: AppViewModel) {
                                     onMore = {
                                         sheets(
                                             Actions.trackSheet(track).let { spec ->
-                                                spec.copy(subtitle = "${track.artist} · ${formatBytes(audio.sizeBytes)} · ${audio.bitrate / 1000} kbps")
+                                                spec.copy(subtitle = "${track.artist} · ${formatBytes(audio.sizeBytes)} · ${audio.bitrate / 1000} ${tr("kbps", "kbit/s")}")
                                             }
                                         )
                                     },
@@ -134,9 +139,12 @@ fun LibraryScreen(app: AppViewModel) {
                 LibraryPage.PLAYLISTS -> {
                     if (library.playlists.isEmpty()) {
                         EmptyState(
-                            "NO PLAYLISTS",
-                            "Make your own, or open a YouTube playlist or album and tap the bookmark to keep it here.",
-                            action = { PillButton("New playlist", { sheets(Actions.newPlaylistSheet()) }, icon = Ic.Add, style = PillStyle.Filled) },
+                            tr("NO PLAYLISTS", "AUCUNE PLAYLIST"),
+                            tr(
+                                "Make your own, or open a YouTube playlist or album and tap the bookmark to keep it here.",
+                                "Créez la vôtre, ou ouvrez une playlist ou un album YouTube et touchez le signet pour l'ajouter ici.",
+                            ),
+                            action = { PillButton(tr("New playlist", "Nouvelle playlist"), { sheets(Actions.newPlaylistSheet()) }, icon = Ic.Add, style = PillStyle.Filled) },
                         )
                     } else {
                         LaunchedEffect(library.playlists) { selection.retain(library.playlists.map { it.ref.url }) }
@@ -146,14 +154,14 @@ fun LibraryScreen(app: AppViewModel) {
                                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    PillButton("New playlist", { sheets(Actions.newPlaylistSheet()) }, icon = Ic.Add, style = PillStyle.Filled)
+                                    PillButton(tr("New playlist", "Nouvelle playlist"), { sheets(Actions.newPlaylistSheet()) }, icon = Ic.Add, style = PillStyle.Filled)
                                 }
                             }
                             items(library.playlists, key = { it.ref.url }) { saved ->
                                 val offline = saved.trackIds.count { it in library.audio }
                                 PlaylistRow(
                                     ref = saved.ref.copy(count = saved.trackIds.size.toLong()),
-                                    extra = "$offline OFFLINE",
+                                    extra = tr("$offline OFFLINE", "$offline HORS LIGNE"),
                                     selected = selection.rowState(saved.ref.url),
                                     onLongClick = { selection.toggle(saved.ref.url) },
                                     onClick = {
@@ -172,7 +180,10 @@ fun LibraryScreen(app: AppViewModel) {
 
                 LibraryPage.DOWNLOADS -> {
                     if (taskList.isEmpty()) {
-                        EmptyState("QUEUE EMPTY", "Downloads you start show up here with their progress.")
+                        EmptyState(
+                            tr("QUEUE EMPTY", "FILE VIDE"),
+                            tr("Downloads you start show up here with their progress.", "Les téléchargements lancés s'affichent ici avec leur progression."),
+                        )
                     } else {
                         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
                             item(key = "actions") {
@@ -180,9 +191,9 @@ fun LibraryScreen(app: AppViewModel) {
                                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    PillButton("Clear finished", { Graph.downloads.clearFinished() }, icon = Ic.Check)
+                                    PillButton(tr("Clear finished", "Effacer les terminés"), { Graph.downloads.clearFinished() }, icon = Ic.Check)
                                     if (taskList.any { it.isActive }) {
-                                        PillButton("Cancel all", { Graph.downloads.cancelAll() }, icon = Ic.Close)
+                                        PillButton(tr("Cancel all", "Tout annuler"), { Graph.downloads.cancelAll() }, icon = Ic.Close)
                                     }
                                 }
                             }
@@ -192,7 +203,7 @@ fun LibraryScreen(app: AppViewModel) {
                                         Actions.trackSheet(
                                             task.track,
                                             extra = listOf(
-                                                SheetAction("Remove from list", Ic.Close) { Graph.downloads.remove(task.track.id) },
+                                                SheetAction(tr("Remove from list", "Retirer de la liste"), Ic.Close) { Graph.downloads.remove(task.track.id) },
                                             ),
                                         )
                                     )
@@ -232,11 +243,19 @@ fun LibraryScreen(app: AppViewModel) {
                         sheets(
                             Actions.selectionSheet(
                                 all,
-                                title = if (refs.size == 1) refs[0].title else "${refs.size} playlists selected",
+                                title = if (refs.size == 1) {
+                                    refs[0].title
+                                } else {
+                                    trCount(refs.size, "playlist selected", "playlists selected", "playlist sélectionnée", "playlists sélectionnées")
+                                },
                                 subtitle = Actions.tracksLabel(all.size),
                                 extra = listOf(
                                     SheetAction(
-                                        if (refs.size == 1) "Delete playlist" else "Delete ${refs.size} playlists",
+                                        if (refs.size == 1) {
+                                            tr("Delete playlist", "Supprimer la playlist")
+                                        } else {
+                                            tr("Delete ${refs.size} playlists", "Supprimer ${refs.size} playlists")
+                                        },
                                         Ic.Delete,
                                         destructive = true,
                                         next = { Actions.deletePlaylistsSheet(refs) { selection.clear() } },
@@ -259,13 +278,17 @@ private fun DownloadRow(task: DlTask, onMore: () -> Unit) {
         DlStatus.RUNNING -> if (task.total > 0) {
             "${(task.progress * 100).toInt()}%  ·  ${formatBytes(task.bytes)} / ${formatBytes(task.total)}"
         } else {
-            "DOWNLOADING  ·  ${formatBytes(task.bytes)}"
+            tr("DOWNLOADING  ·  ${formatBytes(task.bytes)}", "TÉLÉCHARGEMENT  ·  ${formatBytes(task.bytes)}")
         }
-        DlStatus.QUEUED -> if (task.auto) "QUEUED  ·  STREAM + DL" else "QUEUED"
-        DlStatus.WAITING_NETWORK -> if (Graph.settings.current.wifiOnly) "WAITING FOR WI-FI" else "WAITING FOR NETWORK"
-        DlStatus.DONE -> "SAVED  ·  ${formatBytes(task.total)}"
-        DlStatus.FAILED -> "FAILED  ·  ${task.error ?: "unknown error"}"
-        DlStatus.CANCELED -> "CANCELED"
+        DlStatus.QUEUED -> if (task.auto) tr("QUEUED  ·  STREAM + DL", "EN ATTENTE  ·  STREAM + DL") else tr("QUEUED", "EN ATTENTE")
+        DlStatus.WAITING_NETWORK -> if (Graph.settings.current.wifiOnly) {
+            tr("WAITING FOR WI-FI", "EN ATTENTE DU WI-FI")
+        } else {
+            tr("WAITING FOR NETWORK", "EN ATTENTE DU RÉSEAU")
+        }
+        DlStatus.DONE -> tr("SAVED  ·  ${formatBytes(task.total)}", "TÉLÉCHARGÉ  ·  ${formatBytes(task.total)}")
+        DlStatus.FAILED -> tr("FAILED  ·  ${task.error ?: "unknown error"}", "ÉCHEC  ·  ${task.error ?: "erreur inconnue"}")
+        DlStatus.CANCELED -> tr("CANCELED", "ANNULÉ")
     }
     Row(
         Modifier.fillMaxWidth().padding(start = 16.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
@@ -306,15 +329,15 @@ private fun DownloadRow(task: DlTask, onMore: () -> Unit) {
                 if (task.status != DlStatus.RUNNING) {
                     DotRing(0f, Modifier.size(16.dp), spinning = true, color = P.saveRed)
                 }
-                IconBtn(Ic.Close, { Graph.downloads.cancel(task.track.id) }, tint = P.textDim, contentDescription = "Cancel")
+                IconBtn(Ic.Close, { Graph.downloads.cancel(task.track.id) }, tint = P.textDim, contentDescription = tr("Cancel", "Annuler"))
             }
             DlStatus.FAILED, DlStatus.CANCELED -> {
-                IconBtn(Ic.Refresh, { Graph.downloads.retry(task.track.id) }, tint = P.text, contentDescription = "Retry")
+                IconBtn(Ic.Refresh, { Graph.downloads.retry(task.track.id) }, tint = P.text, contentDescription = tr("Retry", "Réessayer"))
             }
             DlStatus.DONE -> {
-                IconBtn(Ic.PlaylistPlay, { Graph.player.playNow(task.track) }, tint = P.text, contentDescription = "Play")
+                IconBtn(Ic.PlaylistPlay, { Graph.player.playNow(task.track) }, tint = P.text, contentDescription = tr("Play", "Lire"))
             }
         }
-        IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = "More")
+        IconBtn(Ic.More, onMore, tint = P.textDim, contentDescription = tr("More", "Plus d'options"))
     }
 }

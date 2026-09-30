@@ -1,6 +1,7 @@
 package app.ytune.data
 
 import android.content.Context
+import app.ytune.tr
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,27 +11,66 @@ enum class StreamMode(val label: String) {
     STREAM_AND_DOWNLOAD("STREAM + DL"),
 }
 
-enum class DownloadStrategy(val label: String, val description: String) {
+enum class DownloadStrategy(
+    private val labelEn: String,
+    private val labelFr: String,
+    private val descriptionEn: String,
+    private val descriptionFr: String,
+) {
     PROGRESSIVE(
         "PROGRESSIVE",
+        "PROGRESSIF",
         "Downloads the track you're playing plus the next few in the queue, as you listen.",
+        "Télécharge le titre en cours et les suivants dans la file, au fil de l'écoute.",
     ),
     ALL_AT_ONCE(
         "ALL AT ONCE",
+        "TOUT D'UN COUP",
         "Every track added to the queue (e.g. a whole playlist) is downloaded right away.",
+        "Chaque titre ajouté à la file (une playlist entière, par exemple) est téléchargé tout de suite.",
+    );
+
+    val label: String get() = tr(labelEn, labelFr)
+    val description: String get() = tr(descriptionEn, descriptionFr)
+}
+
+enum class AudioQuality(
+    private val labelEn: String,
+    private val labelFr: String,
+    private val descriptionEn: String,
+    private val descriptionFr: String,
+) {
+    BEST("BEST", "MEILLEURE", "Opus ~160 kbps (WebM)", "Opus ~160 kbit/s (WebM)"),
+    COMPATIBLE("M4A", "M4A", "AAC ~128 kbps, plays everywhere", "AAC ~128 kbit/s, lisible partout"),
+    SAVER("SAVER", "ÉCO", "Lowest bitrate, saves data", "Débit minimal, économise les données");
+
+    val label: String get() = tr(labelEn, labelFr)
+    val description: String get() = tr(descriptionEn, descriptionFr)
+}
+
+/** The app's language; French unless you pick English (Settings → Appearance). */
+enum class Language(val label: String) {
+    FRENCH("FRANÇAIS"),
+    ENGLISH("ENGLISH"),
+}
+
+enum class ThemeMode(
+    private val labelEn: String,
+    private val labelFr: String,
+    private val descriptionEn: String,
+    private val descriptionFr: String,
+) {
+    SYSTEM(
+        "SYSTEM",
+        "SYSTÈME",
+        "Follows the phone's dark mode: black when it's on, paper when it's off.",
+        "Suit le mode sombre du téléphone : noir s'il est activé, papier sinon.",
     ),
-}
+    DARK("DARK", "SOMBRE", "Black, like Nothing OS.", "Noir, comme Nothing OS."),
+    PAPER("PAPER", "PAPIER", "Warm paper instead of white, with black ink.", "Un papier chaud plutôt que du blanc, à l'encre noire.");
 
-enum class AudioQuality(val label: String, val description: String) {
-    BEST("BEST", "Opus ~160 kbps (WebM)"),
-    COMPATIBLE("M4A", "AAC ~128 kbps, plays everywhere"),
-    SAVER("SAVER", "Lowest bitrate, saves data"),
-}
-
-enum class ThemeMode(val label: String, val description: String) {
-    SYSTEM("SYSTEM", "Follows the phone's dark mode: black when it's on, paper when it's off."),
-    DARK("DARK", "Black, like Nothing OS."),
-    PAPER("PAPER", "Warm paper instead of white, with black ink."),
+    val label: String get() = tr(labelEn, labelFr)
+    val description: String get() = tr(descriptionEn, descriptionFr)
 }
 
 data class AppSettings(
@@ -49,6 +89,7 @@ data class AppSettings(
     /** Player shows synced lyrics instead of the cover (tap the cover to cycle dots / photo / lyrics). */
     val lyricsView: Boolean = false,
     val theme: ThemeMode = ThemeMode.SYSTEM,
+    val language: Language = Language.FRENCH,
 ) {
     val downloadWhileStreaming: Boolean get() = mode == StreamMode.STREAM_AND_DOWNLOAD
 }
@@ -81,6 +122,7 @@ class Settings(context: Context) {
             autoplay = prefs.getBoolean("autoplay", d.autoplay),
             lyricsView = prefs.getBoolean("lyricsView", d.lyricsView),
             theme = enumOr(prefs.getString("theme", null), d.theme),
+            language = enumOr(prefs.getString("language", null), d.language),
         )
     }
 
@@ -99,6 +141,7 @@ class Settings(context: Context) {
             .putBoolean("autoplay", s.autoplay)
             .putBoolean("lyricsView", s.lyricsView)
             .putString("theme", s.theme.name)
+            .putString("language", s.language.name)
             .apply()
     }
 

@@ -2,6 +2,7 @@ package app.ytune.glyph
 
 import android.content.Context
 import android.os.SystemClock
+import app.ytune.tr
 
 /**
  * One producer of Glyph Matrix frames on the shared [GlyphLink].
@@ -39,7 +40,7 @@ class GlyphSession(context: Context, private val toyMode: Boolean) {
                 shown = true
                 GlyphLink.frameSent(toyMode)
             }
-            .onFailure { GlyphLink.fail("Frame rejected: ${it.message}") }
+            .onFailure { GlyphLink.fail(tr("Frame rejected: ${it.message}", "Image refusée : ${it.message}")) }
     }
 
     /** Re-sends the current picture (e.g. when the always-on toy is woken up). */

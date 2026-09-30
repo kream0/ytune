@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.ytune.Graph
 import app.ytune.data.PlaylistRef
+import app.ytune.tr
 import app.ytune.ui.Actions
 import app.ytune.ui.components.DotGrid
 import app.ytune.ui.components.DotLoader
@@ -91,7 +92,7 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         ScreenHeader("YTUNE") {
-            ModeChip(onOptions = { sheets(SheetSpec(title = "Playback mode", content = { ModeOptions() })) })
+            ModeChip(onOptions = { sheets(SheetSpec(title = tr("Playback mode", "Mode de lecture"), content = { ModeOptions() })) })
         }
 
         SearchField(
@@ -139,14 +140,20 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
                 ui.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { DotLoader() }
 
                 ui.error != null -> EmptyState(
-                    title = "NO SIGNAL",
+                    title = tr("NO SIGNAL", "PAS DE SIGNAL"),
                     body = ui.error ?: "",
-                    action = { PillButton("Retry", onClick = { vm.search(ui.query ?: vm.query) }, icon = Ic.Refresh) },
+                    action = { PillButton(tr("Retry", "Réessayer"), onClick = { vm.search(ui.query ?: vm.query) }, icon = Ic.Refresh) },
                 )
 
                 ui.query == null -> SearchHero()
 
-                ui.results.isEmpty() -> EmptyState("NOTHING", "No results for “${ui.query}”. Try another filter.")
+                ui.results.isEmpty() -> EmptyState(
+                    tr("NOTHING", "RIEN"),
+                    tr(
+                        "No results for “${ui.query}”. Try another filter.",
+                        "Aucun résultat pour « ${ui.query} ». Essayez un autre filtre.",
+                    ),
+                )
 
                 else -> LazyColumn(
                     state = listState,
@@ -160,8 +167,8 @@ fun SearchScreen(onOpenPlaylist: (PlaylistRef) -> Unit, vm: SearchViewModel = vi
                                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                PillButton("Play all", { Graph.player.playAll(songs) }, icon = Ic.PlaylistPlay, style = PillStyle.Filled)
-                                PillButton("Queue all", {
+                                PillButton(tr("Play all", "Tout lire"), { Graph.player.playAll(songs) }, icon = Ic.PlaylistPlay, style = PillStyle.Filled)
+                                PillButton(tr("Queue all", "Tout en file"), {
                                     Graph.player.enqueue(songs)
                                 }, icon = Ic.PlaylistAdd)
                             }
@@ -227,7 +234,7 @@ private fun SearchField(value: String, onValueChange: (String) -> Unit, onSearch
         Spacer(Modifier.width(12.dp))
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
             if (value.isEmpty()) {
-                Text("Songs, videos, playlists or a link", style = Type.input, color = P.textFaint, maxLines = 1)
+                Text(tr("Songs, videos, playlists or a link", "Titres, vidéos, playlists ou un lien"), style = Type.input, color = P.textFaint, maxLines = 1)
             }
             BasicTextField(
                 value = value,
@@ -245,7 +252,7 @@ private fun SearchField(value: String, onValueChange: (String) -> Unit, onSearch
                 Modifier.size(42.dp).clip(CircleShape).clickable { onValueChange("") },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Ic.Close, contentDescription = "Clear", tint = P.textDim, modifier = Modifier.size(20.dp))
+                Icon(Ic.Close, contentDescription = tr("Clear", "Effacer"), tint = P.textDim, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -276,11 +283,15 @@ private fun SearchHero() {
             DotGrid(Modifier.fillMaxSize(), color = P.outline, spacing = 14.dp, radius = 2.4.dp)
         }
         Spacer(Modifier.height(20.dp))
-        Text("LISTEN", style = Type.display, color = P.text)
+        Text(tr("LISTEN", "ÉCOUTER"), style = Type.display, color = P.text)
         Spacer(Modifier.height(10.dp))
         Text(
-            "Search YouTube, tap a song to play it. Add whole playlists with the + button, " +
-                "or paste / share a YouTube link. Switch on STREAM + DL to keep everything offline.",
+            tr(
+                "Search YouTube, tap a song to play it. Add whole playlists with the + button, " +
+                    "or paste / share a YouTube link. Switch on STREAM + DL to keep everything offline.",
+                "Cherchez sur YouTube, touchez un titre pour le lire. Ajoutez des playlists entières avec le bouton +, " +
+                    "ou collez / partagez un lien YouTube. Activez STREAM + DL pour tout garder hors ligne.",
+            ),
             style = Type.body,
             color = P.textDim,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,

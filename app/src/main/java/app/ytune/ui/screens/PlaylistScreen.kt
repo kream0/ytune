@@ -33,6 +33,7 @@ import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
 import app.ytune.data.formatDuration
 import app.ytune.data.isLocal
+import app.ytune.tr
 import app.ytune.ui.Actions
 import app.ytune.ui.components.Artwork
 import app.ytune.ui.components.DotLoader
@@ -106,7 +107,7 @@ class PlaylistViewModel(private val initial: PlaylistRef) : ViewModel() {
                 _ui.value = if (saved != null) {
                     PlaylistUi(saved.ref, Graph.library.tracksOf(saved), loading = false, offline = true)
                 } else {
-                    _ui.value.copy(loading = false, error = e.message ?: "Couldn't load playlist")
+                    _ui.value.copy(loading = false, error = e.message ?: tr("Couldn't load playlist", "Impossible de charger la playlist"))
                 }
             }
         }
@@ -138,14 +139,24 @@ private fun YouTubePlaylistScreen(ref: PlaylistRef, onBack: () -> Unit) {
                 onClick = {
                     if (saved) {
                         Graph.library.removePlaylist(ref.url)
-                        Graph.toast("Removed from library")
+                        Graph.toast(
+                            tr(
+                                "Removed from library",
+                                if (ui.ref.isAlbum) "Album retiré de la bibliothèque" else "Playlist retirée de la bibliothèque",
+                            )
+                        )
                     } else if (ui.tracks.isNotEmpty()) {
                         Graph.library.savePlaylist(ui.ref, ui.tracks)
-                        Graph.toast("Saved to library")
+                        Graph.toast(
+                            tr(
+                                "Saved to library",
+                                if (ui.ref.isAlbum) "Album enregistré dans la bibliothèque" else "Playlist enregistrée dans la bibliothèque",
+                            )
+                        )
                     }
                 },
                 tint = if (saved) P.accent else P.text,
-                contentDescription = "Save to library",
+                contentDescription = tr("Save to library", "Enregistrer dans la bibliothèque"),
             )
         },
     )
@@ -166,15 +177,15 @@ private fun MyPlaylistScreen(ref: PlaylistRef, onBack: () -> Unit) {
         onBack = onBack,
         onRetry = {},
         onDownloadAll = { Actions.download(tracks) },
-        topAction = { IconBtn(Ic.More, { sheets(Actions.myPlaylistSheet(saved.ref, onOpen = null)) }, contentDescription = "Playlist options") },
+        topAction = { IconBtn(Ic.More, { sheets(Actions.myPlaylistSheet(saved.ref, onOpen = null)) }, contentDescription = tr("Playlist options", "Options de la playlist")) },
         mine = true,
         trackExtras = { index, track ->
             buildList {
-                if (index > 0) add(SheetAction("Move up", Ic.ChevronUp) { Graph.library.movePlaylistTrack(url, index, index - 1) })
+                if (index > 0) add(SheetAction(tr("Move up", "Monter"), Ic.ChevronUp) { Graph.library.movePlaylistTrack(url, index, index - 1) })
                 if (index < tracks.size - 1) {
-                    add(SheetAction("Move down", Ic.ChevronDown) { Graph.library.movePlaylistTrack(url, index, index + 1) })
+                    add(SheetAction(tr("Move down", "Descendre"), Ic.ChevronDown) { Graph.library.movePlaylistTrack(url, index, index + 1) })
                 }
-                add(SheetAction("Remove from playlist", Ic.Close, destructive = true) {
+                add(SheetAction(tr("Remove from playlist", "Retirer de la playlist"), Ic.Close, destructive = true) {
                     Graph.library.removeFromPlaylist(url, setOf(track.id))
                 })
             }
@@ -183,18 +194,23 @@ private fun MyPlaylistScreen(ref: PlaylistRef, onBack: () -> Unit) {
             val ids = chosen.map { it.id }.toSet()
             listOf(
                 SheetAction(
-                    "Move to another playlist",
+                    tr("Move to another playlist", "Déplacer vers une autre playlist"),
                     Ic.PlaylistPlay,
                     next = {
-                        Actions.addToPlaylistSheet(chosen, title = "Move to playlist", exclude = url) {
+                        Actions.addToPlaylistSheet(chosen, title = tr("Move to playlist", "Déplacer vers une playlist"), exclude = url) {
                             Graph.library.removeFromPlaylist(url, ids)
                             done()
                         }
                     },
                 ),
-                SheetAction("Remove from playlist", Ic.Close, destructive = true) {
+                SheetAction(tr("Remove from playlist", "Retirer de la playlist"), Ic.Close, destructive = true) {
                     Graph.library.removeFromPlaylist(url, ids)
-                    Graph.toast("Removed ${Actions.tracksLabel(ids.size)}")
+                    Graph.toast(
+                        tr(
+                            "Removed ${Actions.tracksLabel(ids.size)}",
+                            if (ids.size <= 1) "${ids.size} titre retiré" else "${ids.size} titres retirés",
+                        )
+                    )
                     done()
                 },
             )
@@ -234,11 +250,11 @@ private fun PlaylistContent(
                     Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconBtn(Ic.Back, onBack, contentDescription = "Back")
+                    IconBtn(Ic.Back, onBack, contentDescription = tr("Back", "Retour"))
                     Spacer(Modifier.weight(1f))
                     SectionLabel(
                         when {
-                            mine -> "My playlist"
+                            mine -> tr("My playlist", "Ma playlist")
                             ui.ref.isAlbum -> "Album"
                             else -> "Playlist"
                         }
@@ -263,10 +279,11 @@ private fun PlaylistContent(
                     }
                     Spacer(Modifier.height(8.dp))
                     val stats = buildList {
-                        add("${ui.tracks.size}${if (ui.loading) "+" else ""} TRACKS")
+                        val shown = "${ui.tracks.size}${if (ui.loading) "+" else ""}"
+                        add(tr("$shown TRACKS", if (ui.tracks.size <= 1 && !ui.loading) "$shown TITRE" else "$shown TITRES"))
                         if (totalSec > 0) add(formatDuration(totalSec))
-                        if (downloadedCount > 0) add("$downloadedCount OFFLINE")
-                        if (ui.offline) add("SAVED COPY")
+                        if (downloadedCount > 0) add(tr("$downloadedCount OFFLINE", "$downloadedCount HORS LIGNE"))
+                        if (ui.offline) add(tr("SAVED COPY", "COPIE ENREGISTRÉE"))
                     }
                     Text(stats.joinToString("  ·  "), style = Type.label, color = P.textFaint)
                 }
@@ -278,14 +295,14 @@ private fun PlaylistContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 ) {
                     val enabled = ui.tracks.isNotEmpty()
-                    PillButton("Play", { Graph.player.playAll(ui.tracks) }, icon = Ic.PlaylistPlay, style = PillStyle.Accent, enabled = enabled)
-                    PillButton("Shuffle", { Graph.player.playAll(ui.tracks, shuffle = true) }, icon = Ic.Shuffle, enabled = enabled)
+                    PillButton(tr("Play", "Lire"), { Graph.player.playAll(ui.tracks) }, icon = Ic.PlaylistPlay, style = PillStyle.Accent, enabled = enabled)
+                    PillButton(tr("Shuffle", "Aléatoire"), { Graph.player.playAll(ui.tracks, shuffle = true) }, icon = Ic.Shuffle, enabled = enabled)
                     IconBtn(Ic.PlaylistAdd, {
                         if (enabled) {
                             Graph.player.enqueue(ui.tracks)
                         }
-                    }, bordered = true, size = 44.dp, contentDescription = "Add all to queue")
-                    IconBtn(Ic.Download, { if (enabled) onDownloadAll() }, bordered = true, size = 44.dp, contentDescription = "Download all")
+                    }, bordered = true, size = 44.dp, contentDescription = tr("Add all to queue", "Tout ajouter à la file"))
+                    IconBtn(Ic.Download, { if (enabled) onDownloadAll() }, bordered = true, size = 44.dp, contentDescription = tr("Download all", "Tout télécharger"))
                 }
             }
 
@@ -298,8 +315,12 @@ private fun PlaylistContent(
             if (mine && ui.tracks.isEmpty()) {
                 item(key = "empty") {
                     Text(
-                        "No songs yet. Anywhere in the app (search, library, queue), tap ⋯ on a song " +
-                            "and choose Add to playlist, or long-press to select several.",
+                        tr(
+                            "No songs yet. Anywhere in the app (search, library, queue), tap ⋯ on a song " +
+                                "and choose Add to playlist, or long-press to select several.",
+                            "Aucun titre pour l'instant. Partout dans l'app (recherche, bibliothèque, file d'attente), touchez ⋯ sur un titre " +
+                                "et choisissez Ajouter à une playlist, ou appuyez longuement pour en sélectionner plusieurs.",
+                        ),
                         style = Type.body,
                         color = P.textDim,
                         textAlign = TextAlign.Center,
@@ -313,7 +334,7 @@ private fun PlaylistContent(
                     Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(error, style = Type.body, color = P.textDim, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(12.dp))
-                        PillButton("Retry", onRetry, icon = Ic.Refresh)
+                        PillButton(tr("Retry", "Réessayer"), onRetry, icon = Ic.Refresh)
                     }
                 }
             }
@@ -341,7 +362,7 @@ private fun PlaylistContent(
                     ) {
                         DotLoader()
                         Spacer(Modifier.size(12.dp))
-                        Text("LOADING ${ui.tracks.size}…", style = Type.label, color = P.textDim)
+                        Text(tr("LOADING ${ui.tracks.size}…", "CHARGEMENT ${ui.tracks.size}…"), style = Type.label, color = P.textDim)
                     }
                 }
             }
