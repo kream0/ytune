@@ -33,7 +33,8 @@ class SameSong {
             return norm(q?.title ?: title) to norm(q?.artist ?: artist)
         }
 
-        private fun norm(s: String): String =
+        /** Lower case, no accents, letters and digits only: "Beyoncé – Halo!" → "beyoncehalo". */
+        fun norm(s: String): String =
             nonAlnum.replace(marks.replace(Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD), ""), "")
     }
 }

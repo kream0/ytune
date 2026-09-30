@@ -94,6 +94,15 @@ fun AppRoot(app: AppViewModel) {
         )
     }
 
+    LaunchedEffect(Unit) {
+        Nav.events.collect { event ->
+            when (event) {
+                is NavEvent.OpenPlaylist -> app.openPlaylist(event.ref)
+                is NavEvent.ShowSheet -> sheet = event.spec
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalDl provides dl, LocalSheets provides openSheet) {
         Box(Modifier.fillMaxSize().background(P.background)) {
             Column(Modifier.fillMaxSize()) {

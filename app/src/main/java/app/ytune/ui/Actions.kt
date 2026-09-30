@@ -1,8 +1,10 @@
 package app.ytune.ui
 
 import app.ytune.Graph
+import app.ytune.album.AlbumResult
 import app.ytune.data.PlaylistRef
 import app.ytune.data.Track
+import app.ytune.data.formatDuration
 import app.ytune.data.isLocal
 import app.ytune.ui.components.Ic
 import app.ytune.ui.components.NameEntry
@@ -100,6 +102,7 @@ object Actions {
                 Graph.player.enqueue(listOf(track))
             })
             add(SheetAction("Add to playlist", Ic.PlaylistAdd, next = { addToPlaylistSheet(listOf(track)) }))
+            add(SheetAction("Go to album", Ic.Album) { goToAlbum(track) })
             if (downloaded) {
                 add(SheetAction("Delete download", Ic.Delete, destructive = true) {
                     Graph.library.deleteDownload(track.id)
@@ -135,6 +138,43 @@ object Actions {
                 },
             ),
         )
+    }
+
+    // ------------------------------------------------------------------ go to album
+
+    /**
+     * Finds the album [track] is on and opens it, like Spotify's "Go to album". When YouTube only
+     * has it as one long video, offers that instead.
+     */
+    fun goToAlbum(track: Track) {
+        Graph.toast("Looking for the album…")
+        Graph.scope.launch {
+            val result = try {
+                withContext(Dispatchers.IO) { Graph.albums.find(track) }
+            } catch (e: Exception) {
+                Graph.toast("Couldn't look up the album (${e.message ?: "offline?"})")
+                return@launch
+            }
+            when (result) {
+                is AlbumResult.OnYouTube -> Nav.openPlaylist(result.ref)
+                is AlbumResult.FullVideo -> {
+                    val video = result.video
+                    Nav.showSheet(
+                        SheetSpec(
+                            title = result.album.title,
+                            subtitle = "${result.album.artist} · not on YouTube as an album · one ${formatDuration(video.durationSec)} video",
+                            actions = listOf(
+                                SheetAction("Play the full album", Ic.PlaylistPlay) { Graph.player.playNow(video) },
+                                SheetAction("Add to queue", Ic.Queue) { Graph.player.enqueue(listOf(video)) },
+                                SheetAction("Download", Ic.Download) { download(listOf(video)) },
+                            ),
+                        )
+                    )
+                }
+                is AlbumResult.NotOnYouTube -> Graph.toast("“${result.album.title}” isn't on YouTube")
+                AlbumResult.Unknown -> Graph.toast("Couldn't tell which album this song is from")
+            }
+        }
     }
 
     // ------------------------------------------------------------------ your own playlists

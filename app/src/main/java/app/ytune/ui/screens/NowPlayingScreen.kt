@@ -247,22 +247,30 @@ private fun ModeTabs(current: ArtMode, modifier: Modifier = Modifier) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TitleBlock(track: Track) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-        Text(
-            track.title,
-            style = Type.titleLarge,
-            color = P.text,
-            maxLines = 1,
-            modifier = Modifier.basicMarquee(),
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            track.artist.uppercase(),
-            style = Type.label,
-            color = P.textDim,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+    val sheets = LocalSheets.current
+    Row(
+        Modifier.fillMaxWidth().padding(start = 24.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                track.title,
+                style = Type.titleLarge,
+                color = P.text,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee(),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                track.artist.uppercase(),
+                style = Type.label,
+                color = P.textDim,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        // Go to album, add to playlist, download… for the song that's playing.
+        IconBtn(Ic.More, { sheets(Actions.trackSheet(track)) }, tint = P.textDim, contentDescription = "More")
     }
 }
 

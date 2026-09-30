@@ -1,6 +1,7 @@
 package app.ytune
 
 import android.app.Application
+import app.ytune.album.AlbumFinder
 import app.ytune.data.Library
 import app.ytune.data.Settings
 import app.ytune.download.DownloadManager
@@ -46,6 +47,7 @@ object Graph {
     val queueStore: QueueStore by lazy { QueueStore(app) }
     val updater: Updater by lazy { Updater(app, http, settings, scope) }
     val lyrics: LyricsRepo by lazy { LyricsRepo(app, http, scope) }
+    val albums: AlbumFinder by lazy { AlbumFinder(http) }
 
     /** Published by the playback service; read by the Glyph Matrix renderers. */
     val nowPlaying = MutableStateFlow<NowPlayingInfo?>(null)

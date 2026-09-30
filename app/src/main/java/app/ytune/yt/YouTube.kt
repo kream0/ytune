@@ -74,6 +74,26 @@ object YouTube {
     private val service get() = ServiceList.YouTube
     private val streamCache = ConcurrentHashMap<String, ResolvedStream>()
     private val relatedCache = ConcurrentHashMap<String, List<Track>>()
+    private val descriptionCache = ConcurrentHashMap<String, String>()
+
+    /**
+     * The video's description (free when the song was streamed, one page load otherwise).
+     * YouTube Music's auto-generated uploads name the album in it.
+     */
+    fun description(videoId: String): String {
+        descriptionCache[videoId]?.let { return it }
+        val extractor = try {
+            service.getStreamExtractor(watchUrl(videoId)).also { it.fetchPage() }
+        } catch (e: IOException) {
+            throw e
+        } catch (e: Exception) {
+            throw IOException(e.message ?: e.javaClass.simpleName, e)
+        }
+        relatedOf(extractor).takeIf { it.isNotEmpty() }?.let { relatedCache[videoId] = it }
+        val text = runCatching { extractor.description.content }.getOrNull().orEmpty()
+        descriptionCache[videoId] = text
+        return text
+    }
     private val locks = ConcurrentHashMap<String, Any>()
     private val videoIdRegex =
         Regex("""(?:v=|/shorts/|youtu\.be/|/embed/|/live/|/v/)([A-Za-z0-9_-]{11})""")
@@ -206,6 +226,7 @@ object YouTube {
             expiresAt = expires,
         )
         relatedOf(extractor).takeIf { it.isNotEmpty() }?.let { relatedCache[videoId] = it }
+        runCatching { extractor.description.content }.getOrNull()?.let { descriptionCache[videoId] = it }
         val track = Track(
             id = videoId,
             title = runCatching { extractor.name }.getOrNull() ?: videoId,
