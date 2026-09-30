@@ -100,7 +100,9 @@ fun main() {
         val albums = MusicAlbums.parseSearch(raw)
         albums.forEach { println("album: ${it.title} | ${it.artist} | ${it.kind} | ${it.year} | pl=${it.playlistId} | browse=${it.browseId}") }
         println("-- resolved:")
+        val t0 = System.currentTimeMillis()
         MusicAlbums.search("Drake More Life").forEach { println("  ${it.title} -> ${it.url}") }
+        println("-- search + resolve took ${System.currentTimeMillis() - t0} ms")
         moreLife = MusicAlbums.search("Drake More Life").firstOrNull { it.title == "More Life" }?.url.orEmpty()
         if (moreLife.isEmpty()) dumpIds(raw)
     }
