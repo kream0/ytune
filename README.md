@@ -7,7 +7,7 @@
 
 <table align="center">
   <tr>
-    <td align="center"><img src="docs/screenshots/player.webp" width="200" alt="Now playing: Wild World by Cat Stevens, photo cover, dot-matrix seek bar"></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/player-paper.webp"><img src="docs/screenshots/player.webp" width="200" alt="Now playing: Wild World by Cat Stevens, photo cover, dot-matrix seek bar"></picture></td>
     <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/search-paper.webp"><img src="docs/screenshots/search.webp" width="200" alt="Search results for cat stevens, with Play all and Queue all"></picture></td>
     <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/playlist-paper.webp"><img src="docs/screenshots/playlist.webp" width="200" alt="A YouTube playlist opened like an album, with Play, Shuffle, queue and download"></picture></td>
     <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/library-paper.webp"><img src="docs/screenshots/library.webp" width="200" alt="Library: saved songs with their green offline dot"></picture></td>
