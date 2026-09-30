@@ -49,10 +49,12 @@
 
 <table align="center">
   <tr>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/lyrics-paper.webp"><img src="docs/screenshots/lyrics.webp" width="240" alt="Synced lyrics of Peace Train: the line being sung fills in word by word"></picture></td>
     <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/playback-mode-paper.webp"><img src="docs/screenshots/playback-mode.webp" width="240" alt="Playback mode sheet: STREAM or STREAM + DL, Progressive or All at once"></picture></td>
     <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/song-menu-paper.webp"><img src="docs/screenshots/song-menu.webp" width="240" alt="Song menu: Play now, Add next in queue, Add to queue, Add to playlist, Go to album, Delete download"></picture></td>
   </tr>
   <tr>
+    <td align="center"><sub>Synced lyrics, karaoke-style</sub></td>
     <td align="center"><sub>Stream, or stream + download</sub></td>
     <td align="center"><sub>The ⋯ menu: add next, add to playlist, go to album</sub></td>
   </tr>
