@@ -13,4 +13,5 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - run: ./gradlew --no-daemon -q -p probe run
+      # JitPack sometimes answers "not found" for a moment: retry.
+      - run: for i in 1 2 3; do ./gradlew --no-daemon -q -p probe run --refresh-dependencies && exit 0; sleep 20; done; exit 1
