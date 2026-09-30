@@ -8,9 +8,9 @@
 <table align="center">
   <tr>
     <td align="center"><img src="docs/screenshots/player.webp" width="200" alt="Now playing: Wild World by Cat Stevens, photo cover, dot-matrix seek bar"></td>
-    <td align="center"><img src="docs/screenshots/search.webp" width="200" alt="Search results for cat stevens, with Play all and Queue all"></td>
-    <td align="center"><img src="docs/screenshots/playlist.webp" width="200" alt="A YouTube playlist opened like an album, with Play, Shuffle, queue and download"></td>
-    <td align="center"><img src="docs/screenshots/library.webp" width="200" alt="Library: saved songs with their green offline dot"></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/search-paper.webp"><img src="docs/screenshots/search.webp" width="200" alt="Search results for cat stevens, with Play all and Queue all"></picture></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/playlist-paper.webp"><img src="docs/screenshots/playlist.webp" width="200" alt="A YouTube playlist opened like an album, with Play, Shuffle, queue and download"></picture></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/library-paper.webp"><img src="docs/screenshots/library.webp" width="200" alt="Library: saved songs with their green offline dot"></picture></td>
   </tr>
   <tr>
     <td align="center"><sub>Player</sub></td>
@@ -43,14 +43,14 @@
   - List rows get a matching ring, or a green dot when the track is saved.
 - **Reorder the queue by dragging:** grab the six-dot handle on the left of a song in the queue and move it up or down. The row lifts, the others slide out of the way, the list scrolls when you reach an edge, and each step ticks. Long-press the rest of the row to select instead.
 - **Player:** queue, shuffle, repeat, seek, a dot-matrix seek bar and "halftone" dot artwork. Tap the cover to cycle **dots → photo → lyrics**.
-- **Dark or paper:** black like Nothing OS, or warm paper with black ink instead of plain white. Pick it in *Settings → Appearance* (`SYSTEM / DARK / PAPER`); *System* follows the phone's dark mode. The status bar icons follow the choice.
+- **Dark or paper:** black like Nothing OS, or warm paper with black ink instead of plain white (the screenshots here follow your GitHub theme). Pick it in *Settings → Appearance* (`SYSTEM / DARK / PAPER`); *System* follows the phone's dark mode. The status bar icons follow the choice.
 - **Lyrics:** Spotify-style synced lyrics where the cover was. They scroll on their own, the line being sung fills in karaoke-style (word by word when the lyrics have word timing), sung lines stay lit and upcoming ones are dimmed. Scroll by hand to look around; it catches up again after a few seconds. Long-press a line to jump there. Lyrics come from [LRCLIB](https://lrclib.net), a free, open lyrics database. YouTube titles are cleaned up first ("Artist - Title (Official Video)" → artist + title), and synced lyrics are only used when their length matches the song, otherwise the plain text is shown ("NOT SYNCED"). Lyrics are cached, and songs you save fetch theirs in the background, so they work offline too.
 - **Headset and Nothing Ear controls:** playback runs in a Media3 `MediaSession`, so it works from Bluetooth media keys (play/pause, next, previous), the lock screen and the notification. It pauses when the earbuds disconnect or come out, and pressing play with the app closed resumes your last queue.
 
 <table align="center">
   <tr>
-    <td align="center"><img src="docs/screenshots/playback-mode.webp" width="240" alt="Playback mode sheet: STREAM or STREAM + DL, Progressive or All at once"></td>
-    <td align="center"><img src="docs/screenshots/song-menu.webp" width="240" alt="Song menu: Play now, Add next in queue, Add to queue, Add to playlist, Go to album, Delete download"></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/playback-mode-paper.webp"><img src="docs/screenshots/playback-mode.webp" width="240" alt="Playback mode sheet: STREAM or STREAM + DL, Progressive or All at once"></picture></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/song-menu-paper.webp"><img src="docs/screenshots/song-menu.webp" width="240" alt="Song menu: Play now, Add next in queue, Add to queue, Add to playlist, Go to album, Delete download"></picture></td>
   </tr>
   <tr>
     <td align="center"><sub>Stream, or stream + download</sub></td>
@@ -69,7 +69,7 @@
 
 <table align="center">
   <tr>
-    <td align="center"><img src="docs/screenshots/glyph-matrix.webp" width="240" alt="Settings: live preview of the Glyph Matrix and its switches"></td>
+    <td align="center"><picture><source media="(prefers-color-scheme: light)" srcset="docs/screenshots/glyph-matrix-paper.webp"><img src="docs/screenshots/glyph-matrix.webp" width="240" alt="Settings: live preview of the Glyph Matrix and its switches"></picture></td>
     <td align="center"><img src="docs/screenshots/settings-updates.webp" width="240" alt="Settings: matrix test and status lines, YTune up to date, auto-download updates"></td>
   </tr>
   <tr>

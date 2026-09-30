@@ -268,7 +268,7 @@ section { padding-block: clamp(56px, 9vw, 120px); border-top: 1px solid var(--li
 figure { margin: 0; }
 .phone {
   position: relative;
-  aspect-ratio: 840 / 1768;
+  aspect-ratio: 840 / 1755;
   border-radius: 30px;
   background: var(--device);
   border: 1px solid var(--line);
@@ -276,7 +276,9 @@ figure { margin: 0; }
   overflow: hidden;
   transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s;
 }
-.phone img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.phone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity .6s ease; }
+/* the same screen in the paper theme, lined up pixel for pixel: it fades in over the dark one */
+.phone img.paper { opacity: 0; }
 .shot:hover .phone { transform: translateY(-6px); box-shadow: 0 0 0 5px var(--surface), 0 0 0 6px var(--dim), 0 38px 70px var(--shadow); }
 /* the eighth cell: the download, shaped like a phone */
 .tile {
@@ -402,6 +404,10 @@ footer a { color: var(--dim); }
   .btn-dl small { display: none; }
   .hero h1 .pip { right: -0.2em; }
 }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .phone img.paper { opacity: 1; }
+}
+:root[data-theme="light"] .phone img.paper { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -478,7 +484,7 @@ img { max-width: 100%; }
             <span class="stamp" aria-hidden="true">YTUNE · NOW PLAYING</span>
           </div>
           <div class="phone front">
-            <img src="screenshots/player.webp" width="840" height="1768" alt="Écran de lecture de YTune : Wild World de Cat Stevens, pochette en photo, barre de lecture à points, bouton pause.">
+            <img src="screenshots/player.webp" width="840" height="1755" alt="Écran de lecture de YTune : Wild World de Cat Stevens, pochette en photo, barre de lecture à points, bouton pause.">
           </div>
         </div>
         <p class="label">Au dos, la Glyph Matrix des Nothing Phone (3) et (4a) Pro<br>fait défiler le titre. Touchez-la.</p>
@@ -496,31 +502,31 @@ img { max-width: 100%; }
 
       <div class="shots">
         <figure class="shot">
-          <div class="phone"><img src="screenshots/search.webp" width="840" height="1768" loading="lazy" alt="Recherche « cat stevens » dans l'onglet Songs, avec les boutons Play all et Queue all."></div>
+          <div class="phone"><img src="screenshots/search.webp" width="840" height="1755" loading="lazy" alt="Recherche « cat stevens » dans l'onglet Songs, avec les boutons Play all et Queue all."><img class="paper" src="screenshots/search-paper.webp" width="840" height="1755" loading="lazy" alt="" aria-hidden="true"></div>
           <figcaption><span class="label">Recherche</span><p>Morceaux, vidéos, playlists, albums. Tout lire ou tout mettre en file d'un geste.</p></figcaption>
         </figure>
         <figure class="shot">
-          <div class="phone"><img src="screenshots/playback-mode.webp" width="840" height="1768" loading="lazy" alt="Panneau Playback mode : STREAM ou STREAM + DL, stratégie Progressive ou All at once."></div>
+          <div class="phone"><img src="screenshots/playback-mode.webp" width="840" height="1755" loading="lazy" alt="Panneau Playback mode : STREAM ou STREAM + DL, stratégie Progressive ou All at once."><img class="paper" src="screenshots/playback-mode-paper.webp" width="840" height="1755" loading="lazy" alt="" aria-hidden="true"></div>
           <figcaption><span class="label">Stream ou Stream + DL</span><p>Streaming seul, ou enregistrement au fil de l'écoute ou d'un coup.</p></figcaption>
         </figure>
         <figure class="shot">
-          <div class="phone"><img src="screenshots/song-menu.webp" width="840" height="1768" loading="lazy" alt="Menu d'un morceau dans la file : Play now, Add next in queue, Add to queue, Add to playlist, Go to album."></div>
+          <div class="phone"><img src="screenshots/song-menu.webp" width="840" height="1755" loading="lazy" alt="Menu d'un morceau dans la file : Play now, Add next in queue, Add to queue, Add to playlist, Go to album."><img class="paper" src="screenshots/song-menu-paper.webp" width="840" height="1755" loading="lazy" alt="" aria-hidden="true"></div>
           <figcaption><span class="label">Le menu ⋯</span><p>Lire maintenant, ajouter juste après, dans une playlist, aller à l'album.</p></figcaption>
         </figure>
         <figure class="shot">
-          <div class="phone"><img src="screenshots/playlist.webp" width="840" height="1768" loading="lazy" alt="Playlist The Very Best Of Cat Stevens : 20 titres, boutons Play et Shuffle, mini-lecteur en bas."></div>
+          <div class="phone"><img src="screenshots/playlist.webp" width="840" height="1755" loading="lazy" alt="Playlist The Very Best Of Cat Stevens : 20 titres, boutons Play et Shuffle, mini-lecteur en bas."><img class="paper" src="screenshots/playlist-paper.webp" width="840" height="1755" loading="lazy" alt="" aria-hidden="true"></div>
           <figcaption><span class="label">Playlists et albums</span><p>Une playlist YouTube s'ouvre comme un album : lecture, aléatoire, file, téléchargement.</p></figcaption>
         </figure>
         <figure class="shot">
-          <div class="phone"><img src="screenshots/library.webp" width="840" height="1768" loading="lazy" alt="Bibliothèque : deux morceaux enregistrés avec leur point vert, onglets Songs, Playlists et Queue."></div>
+          <div class="phone"><img src="screenshots/library.webp" width="840" height="1755" loading="lazy" alt="Bibliothèque : deux morceaux enregistrés avec leur point vert, onglets Songs, Playlists et Queue."><img class="paper" src="screenshots/library-paper.webp" width="840" height="1755" loading="lazy" alt="" aria-hidden="true"></div>
           <figcaption><span class="label">Bibliothèque</span><p>Les morceaux enregistrés portent un point vert et marchent sans réseau.</p></figcaption>
         </figure>
         <figure class="shot">
-          <div class="phone"><img src="screenshots/glyph-matrix.webp" width="840" height="1768" loading="lazy" alt="Réglages : Wi-Fi only, téléchargements parallèles, cache, et aperçu de la Glyph Matrix."></div>
+          <div class="phone"><img src="screenshots/glyph-matrix.webp" width="840" height="1755" loading="lazy" alt="Réglages : Wi-Fi only, téléchargements parallèles, cache, et aperçu de la Glyph Matrix."><img class="paper" src="screenshots/glyph-matrix-paper.webp" width="840" height="1755" loading="lazy" alt="" aria-hidden="true"></div>
           <figcaption><span class="label">Glyph Matrix</span><p>Aperçu en direct de ce qu'affiche le dos du téléphone.</p></figcaption>
         </figure>
         <figure class="shot">
-          <div class="phone"><img src="screenshots/settings-updates.webp" width="840" height="1768" loading="lazy" alt="Réglages : test de la matrice, YTune v1.4.5 à jour, commandes des écouteurs Nothing Ear."></div>
+          <div class="phone"><img src="screenshots/settings-updates.webp" width="840" height="1755" loading="lazy" alt="Réglages : test de la matrice, YTune v1.4.5 à jour, commandes des écouteurs Nothing Ear."></div>
           <figcaption><span class="label">Mises à jour</span><p>YTune suit les versions publiées et se met à jour lui-même.</p></figcaption>
         </figure>
         <figure class="shot">
