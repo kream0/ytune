@@ -104,9 +104,20 @@ class AlbumFinder(private val http: OkHttpClient) {
         val albumUrls = albums.map { it.ref.url }.toSet()
         val playlists = playlistsJob.await()
             .filter { it.url !in albumUrls && AlbumMatch.playlistAbout(it.title, it.uploader, album) }
-            .take(MAX_PLAYLISTS)
             .map { AlbumOption(it, isAlbum = false, tracks = it.count.takeIf { n -> n >= 0 }?.toInt(), hasSong = false) }
-        albums + playlists
+            .filter { isWholeRelease(it, album) }
+            .take(MAX_PLAYLISTS)
+        albums.filter { isWholeRelease(it, album) } + playlists
+    }
+
+    /**
+     * Leaves out one-track entries (a lone song uploaded as a "playlist", or the single when
+     * we're after the album) and empty ones. Unknown counts stay. When the song's release really
+     * is a single, its one-track album is what we want, so it stays.
+     */
+    private fun isWholeRelease(o: AlbumOption, album: AlbumMatch.Album): Boolean {
+        val n = o.tracks ?: return true
+        return n >= 2 || (n == 1 && o.isAlbum && album.kind == AlbumMatch.Kind.SINGLE)
     }
 
     private fun search(query: String, filter: SearchFilter): List<PlaylistRef> =
