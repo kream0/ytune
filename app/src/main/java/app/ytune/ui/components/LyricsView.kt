@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -43,6 +44,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -111,10 +113,23 @@ fun LyricsView(track: Track, onTap: () -> Unit, modifier: Modifier = Modifier) {
                     ),
                 )
                 LyricsResult.Instrumental -> Message("♪ ♪ ♪", "Instrumental")
-                is LyricsResult.Found ->
+                is LyricsResult.Found -> {
+                    KeepScreenOnWhilePlaying()
                     if (r.lyrics.synced) SyncedLyrics(r.lyrics, onTap) else PlainLyrics(r.lyrics, onTap)
+                }
             }
         }
+    }
+}
+
+/** Keeps the screen on while lyrics are shown and the song plays; paused, it sleeps as usual. */
+@Composable
+private fun KeepScreenOnWhilePlaying() {
+    val player by Graph.player.state.collectAsStateWithLifecycle()
+    val view = LocalView.current
+    DisposableEffect(view, player.isPlaying) {
+        view.keepScreenOn = player.isPlaying
+        onDispose { view.keepScreenOn = false }
     }
 }
 
