@@ -7,31 +7,11 @@ on:
 jobs:
   align:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    services:
-      # Proof-of-origin tokens for yt-dlp, in case they get the runner past YouTube's bot check.
-      bgutil:
-        image: brainicism/bgutil-ytdlp-pot-provider
-        ports: ['4416:4416']
-    strategy:
-      fail-fast: false
-      matrix:
-        song:
-          - { name: power, artist: "Maher Zain", title: "The Power", id: "6076698" }
-          - { name: assalamu-ar, artist: "Maher Zain", title: "Assalamu Alayka (Arabic Version)", id: "4108748" }
-          - { name: rahmatun, artist: "Maher Zain", title: "Rahmatun Lil'Alameen", id: "2262383" }
-          - { name: insha-allah, artist: "Maher Zain", title: "Insha Allah", id: "-" }
-          - { name: ya-nabi, artist: "Maher Zain", title: "Ya Nabi Salam Alayka", id: "-" }
-          - { name: harris, artist: "Harris J", title: "Salam Alaykum", id: "-" }
-          - { name: someone, artist: "Adele", title: "Someone Like You", id: "-" }
-          - { name: perfect, artist: "Ed Sheeran", title: "Perfect", id: "-" }
-          - { name: blinding, artist: "The Weeknd", title: "Blinding Lights", id: "-" }
-          - { name: yellow, artist: "Coldplay", title: "Yellow", id: "-" }
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - uses: denoland/setup-deno@v2
-      - run: pip install -q -U "yt-dlp[default]" bgutil-ytdlp-pot-provider faster-whisper
-      - run: python probe/align.py "${{ matrix.song.name }}" "${{ matrix.song.artist }}" "${{ matrix.song.title }}" "${{ matrix.song.id }}"
+      - run: pip install -q faster-whisper
+      - run: python probe/align.py
