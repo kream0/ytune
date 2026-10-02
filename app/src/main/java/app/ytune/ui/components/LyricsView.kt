@@ -48,6 +48,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -242,18 +243,21 @@ private fun LyricRow(
     }
 }
 
-/** Text drawn twice: [dim] underneath, [bright] on top clipped to the sung part. */
+/**
+ * Text drawn twice: [dim] underneath, [bright] on top clipped to the sung part. The text takes
+ * the whole width so each line lines up with its own direction (Arabic on the right).
+ */
 @Composable
 private fun KaraokeText(text: String, style: TextStyle, dim: Color, bright: Color, progress: () -> Float) {
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    Box {
-        Text(text, style = style, color = dim, onTextLayout = { layout = it })
+    Box(Modifier.fillMaxWidth()) {
+        Text(text, style = style, color = dim, onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth())
         if (bright != dim) {
             Text(
                 text,
                 style = style,
                 color = bright,
-                modifier = Modifier.drawWithContent {
+                modifier = Modifier.fillMaxWidth().drawWithContent {
                     val l = layout ?: return@drawWithContent
                     val f = progress()
                     if (f <= 0f) return@drawWithContent
@@ -261,26 +265,58 @@ private fun KaraokeText(text: String, style: TextStyle, dim: Color, bright: Colo
                         drawContent()
                         return@drawWithContent
                     }
-                    val exact = text.length * f
-                    val char = exact.toInt().coerceIn(0, text.length)
-                    val row = l.getLineForOffset(char)
-                    val path = Path()
-                    for (i in 0 until row) {
-                        path.addRect(Rect(l.getLineLeft(i), l.getLineTop(i), l.getLineRight(i), l.getLineBottom(i)))
-                    }
-                    val x0 = l.getHorizontalPosition(char, usePrimaryDirection = true)
-                    val x1 = if (char < text.length && l.getLineForOffset(char + 1) == row) {
-                        l.getHorizontalPosition(char + 1, usePrimaryDirection = true)
-                    } else {
-                        x0
-                    }
-                    val x = x0 + (x1 - x0) * (exact - char)
-                    path.addRect(Rect(l.getLineLeft(row), l.getLineTop(row), x, l.getLineBottom(row)))
-                    clipPath(path) { this@drawWithContent.drawContent() }
+                    clipPath(sungPath(l, text.length, text.length * f)) { this@drawWithContent.drawContent() }
                 },
             )
         }
     }
+}
+
+/**
+ * Where the first [exact] characters (in reading order) of a [length]-character text are
+ * drawn. Each character lights up where it sits, so right-to-left text (Arabic, Hebrew) fills
+ * from the right, and a line mixing directions fills each part in its own direction.
+ */
+private fun sungPath(l: TextLayoutResult, length: Int, exact: Float): Path {
+    val path = Path()
+    val char = exact.toInt().coerceIn(0, length)
+    val row = l.getLineForOffset(char)
+    for (i in 0 until row) {
+        path.addRect(Rect(l.getLineLeft(i), l.getLineTop(i), l.getLineRight(i), l.getLineBottom(i)))
+    }
+    val top = l.getLineTop(row)
+    val bottom = l.getLineBottom(row)
+    // Whole characters, one rectangle per run of the same direction (no seams between letters).
+    var left = Float.MAX_VALUE
+    var right = -Float.MAX_VALUE
+    var runRtl: Boolean? = null
+    fun flush() {
+        if (left < right) path.addRect(Rect(left, top, right, bottom))
+        left = Float.MAX_VALUE
+        right = -Float.MAX_VALUE
+    }
+    for (o in l.getLineStart(row) until char) {
+        val rtl = l.getBidiRunDirection(o) == ResolvedTextDirection.Rtl
+        if (runRtl != null && rtl != runRtl) flush()
+        runRtl = rtl
+        val box = l.getBoundingBox(o)
+        left = minOf(left, box.left)
+        right = maxOf(right, box.right)
+    }
+    flush()
+    // The character being sung, lit part of the way in its own direction.
+    if (char < length && l.getLineForOffset(char) == row) {
+        val box = l.getBoundingBox(char)
+        val part = (exact - char) * box.width
+        if (part > 0f) {
+            if (l.getBidiRunDirection(char) == ResolvedTextDirection.Rtl) {
+                path.addRect(Rect(box.right - part, top, box.right, bottom))
+            } else {
+                path.addRect(Rect(box.left, top, box.left + part, bottom))
+            }
+        }
+    }
+    return path
 }
 
 @OptIn(ExperimentalFoundationApi::class)
