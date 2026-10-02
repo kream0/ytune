@@ -36,9 +36,10 @@ data class Lyrics(val lines: List<LyricLine>, val synced: Boolean) {
 
     /**
      * How far through line [index] the singing is at [positionMs], as a fraction of its
-     * characters (0..1): per word when the lyrics have word timing, otherwise spread over an
-     * estimate of how long the line takes to sing (so a long instrumental gap after it doesn't
-     * slow the sweep down).
+     * characters (0..1). With word timing, per word. Without it (most lyrics only time each
+     * line), the line is spread over the time it actually lasts and swept at the pace of its
+     * syllables, not its letters: Arabic, written without its short vowels, has far fewer
+     * letters per sung second than English.
      */
     fun progress(index: Int, positionMs: Long): Float {
         val line = lines.getOrNull(index) ?: return 0f
@@ -58,15 +59,55 @@ data class Lyrics(val lines: List<LyricLine>, val synced: Boolean) {
             }
             return ((word.start + (word.end - word.start) * within) / line.text.length).coerceIn(0f, 1f)
         }
-        val sung = max(1_200L, line.text.length * MS_PER_CHAR)
-        val end = next?.let { min(it, line.timeMs + sung) } ?: (line.timeMs + sung)
-        if (end <= line.timeMs) return 1f
-        return ((positionMs - line.timeMs).toFloat() / (end - line.timeMs)).coerceIn(0f, 1f)
+        val pace = pace(index)
+        if (pace.durationMs <= 0) return 1f
+        val sung = ((positionMs - line.timeMs).toFloat() / pace.durationMs).coerceIn(0f, 1f)
+        return pace.charsAt(sung) / line.text.length
+    }
+
+    private val paces = arrayOfNulls<Pace>(lines.size)
+
+    private fun pace(index: Int): Pace = paces[index] ?: run {
+        val line = lines[index]
+        val next = lines.getOrNull(index + 1)
+        val cumulative = Syllables.cumulative(line.text)
+        val estimate = max(MIN_LINE_MS, (cumulative.last() * MS_PER_SYLLABLE).toLong())
+        val duration = when {
+            next == null -> estimate
+            // An empty line marks where the singing stops (an instrumental break).
+            next.isBreak -> ((next.timeMs - line.timeMs) * 0.95).toLong()
+            // Otherwise it's sung up to the next line, unless that's much later than the
+            // syllables could fill (an untimed pause in between).
+            else -> min(((next.timeMs - line.timeMs) * 0.9).toLong(), estimate * 2 + estimate / 5)
+        }
+        Pace(duration, cumulative).also { paces[index] = it }
+    }
+
+    /**
+     * How a line is swept: [cumulative] holds, for each character boundary, the share of the
+     * line's syllables sung by then (0 at the start, the total at the end).
+     */
+    private class Pace(val durationMs: Long, private val cumulative: FloatArray) {
+        /** Characters sung (fractional) once [sung] (0..1) of the line's time has passed. */
+        fun charsAt(sung: Float): Float {
+            val total = cumulative.last()
+            if (total <= 0f) return sung * (cumulative.size - 1)
+            val target = sung * total
+            var lo = 0
+            var hi = cumulative.size - 1
+            while (hi - lo > 1) {
+                val mid = (lo + hi) ushr 1
+                if (cumulative[mid] <= target) lo = mid else hi = mid
+            }
+            val span = cumulative[hi] - cumulative[lo]
+            return if (span <= 0f) hi.toFloat() else lo + (target - cumulative[lo]) / span
+        }
     }
 
     companion object {
-        /** Roughly how long a sung character takes, for lines without word timing. */
-        private const val MS_PER_CHAR = 85L
+        /** Roughly how long a sung syllable lasts, to tell a sung line from a pause after it. */
+        private const val MS_PER_SYLLABLE = 260L
+        private const val MIN_LINE_MS = 900L
 
         fun plain(text: String) = Lyrics(
             lines = text.lines().map { LyricLine(0, it.trim()) }.dropWhile { it.isBreak }.dropLastWhile { it.isBreak },
