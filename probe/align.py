@@ -4,7 +4,8 @@ For a few songs, takes Deezer's and iTunes' 30-second previews of the version th
 lyrics were timed on (same length), transcribes them with word timestamps, and prints the
 lyrics and the timed words as JSON lines; the previews are placed in the song offline.
 """
-import json, sys, traceback, urllib.parse, urllib.request
+import json, subprocess, sys, traceback, urllib.parse, urllib.request
+import numpy as np
 from faster_whisper import WhisperModel
 
 SONGS = [  # name, artist, title, LRCLIB id ("-": the synced one closest to Deezer's length)
@@ -55,7 +56,9 @@ for name, artist, title, lrc_id in SONGS:
             clips.append((f"itunes:{t['trackId']}", fetch(t["previewUrl"], f"{name}-it{i}.m4a")))
         for source, path in clips:
             print("CLIP " + json.dumps({"source": source, "full": False}), flush=True)
-            segments, _ = model.transcribe(path, word_timestamps=True, multilingual=True,
+            pcm = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", path, "-f", "f32le", "-ac", "1", "-ar", "16000", "-"],
+                                 capture_output=True, check=True).stdout
+            segments, _ = model.transcribe(np.frombuffer(pcm, np.float32), word_timestamps=True, multilingual=True,
                                            condition_on_previous_text=False, beam_size=5)
             for s in segments:
                 for w in s.words or []:
