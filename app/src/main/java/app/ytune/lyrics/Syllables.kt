@@ -13,9 +13,11 @@ object Syllables {
     /**
      * For each character boundary of [text] (0..length), the syllables sung up to it: a word's
      * syllables are spread evenly over its characters; spaces and punctuation take no time.
+     * [heldOnLastWord] syllables' worth of time is added to the last word.
      */
-    fun cumulative(text: String): FloatArray {
+    fun cumulative(text: String, heldOnLastWord: Float = 0f): FloatArray {
         val weights = FloatArray(text.length)
+        var lastWord = -1 until -1
         var i = 0
         while (i < text.length) {
             if (!isWordChar(text, i)) {
@@ -26,7 +28,12 @@ object Syllables {
             while (end < text.length && isWordChar(text, end)) end++
             val share = count(text.substring(i, end)) / (end - i)
             for (k in i until end) weights[k] = share
+            if (share > 0f) lastWord = i until end
             i = end
+        }
+        if (heldOnLastWord > 0f && !lastWord.isEmpty()) {
+            val extra = heldOnLastWord / (lastWord.last - lastWord.first + 1)
+            for (k in lastWord) weights[k] += extra
         }
         val out = FloatArray(text.length + 1)
         for (k in text.indices) out[k + 1] = out[k] + weights[k]
