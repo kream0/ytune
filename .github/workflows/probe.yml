@@ -1,0 +1,20 @@
+name: Probe
+# Throwaway diagnostics: prints LRCLIB's synced lyrics for a few mixed Arabic/English songs.
+on:
+  push:
+    paths: ['.github/workflows/probe.yml']
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          q() {
+            echo "################ $1 — $2"
+            curl -sS -G "https://lrclib.net/api/search" -A "YTune probe" \
+              --data-urlencode "track_name=$1" --data-urlencode "artist_name=$2" \
+              | jq -r '.[] | "=== id=\(.id) \(.artistName) — \(.trackName) [\(.albumName)] \(.duration)s synced=\(.syncedLyrics != null)\n\(.syncedLyrics // "")"'
+          }
+          q "The Power" "Maher Zain"
+          q "Assalamu Alayka" "Maher Zain"
+          q "Rahmatun Lil'Alameen" "Maher Zain"
