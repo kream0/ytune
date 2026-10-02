@@ -63,3 +63,5 @@ for name, artist, title, lrc_id in SONGS:
                                             ensure_ascii=False), flush=True)
     except Exception:
         print(f"FAILED {name}: " + traceback.format_exc().replace("\n", " | "), flush=True)
+# Long enough that the log tool hands the whole log over as a file.
+print("PAD " + "." * 150_000, flush=True)
