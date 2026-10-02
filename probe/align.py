@@ -35,13 +35,15 @@ def fetch(url, path):
 model = WhisperModel("small", device="cpu", compute_type="int8")
 for name, artist, title, lrc_id in SONGS:
     try:
-        dz = get("https://api.deezer.com/search?" + urllib.parse.urlencode({"q": f'artist:"{artist}" track:"{title}"'})).get("data", [])
+        dz = get("https://api.deezer.com/search?" + urllib.parse.urlencode({"q": f"{artist} {title}"})).get("data", [])
+        print("deezer:", [(t.get("title"), t.get("duration")) for t in dz[:5]], flush=True)
+        it = get("https://itunes.apple.com/search?" + urllib.parse.urlencode({"term": f"{artist} {title}", "entity": "song", "limit": 15}))["results"]
         if lrc_id != "-":
             lrc = get(f"https://lrclib.net/api/get/{lrc_id}")
         else:
             q = urllib.parse.urlencode({"track_name": title, "artist_name": artist})
             found = [r for r in get(f"https://lrclib.net/api/search?{q}") if r.get("syncedLyrics")]
-            ref = dz[0]["duration"] if dz else found[0]["duration"]
+            ref = dz[0]["duration"] if dz else it[0]["trackTimeMillis"] / 1000 if it else found[0]["duration"]
             lrc = min(found, key=lambda r: abs(r["duration"] - ref))
         dur = lrc["duration"]
         print(json.dumps({"song": name, "lrclib": lrc["id"], "lrcDuration": dur}, ensure_ascii=False), flush=True)
@@ -49,8 +51,7 @@ for name, artist, title, lrc_id in SONGS:
         clips = []
         for i, t in enumerate([t for t in dz if t.get("preview") and abs(t["duration"] - dur) <= 3][:1]):
             clips.append((f"deezer:{t['id']}", fetch(t["preview"], f"{name}-dz{i}.mp3")))
-        it = get("https://itunes.apple.com/search?" + urllib.parse.urlencode({"term": f"{artist} {title}", "entity": "song", "limit": 10}))["results"]
-        for i, t in enumerate([t for t in it if t.get("previewUrl") and abs(t.get("trackTimeMillis", 0) / 1000 - dur) <= 3][:1]):
+        for i, t in enumerate([t for t in it if t.get("previewUrl") and abs(t.get("trackTimeMillis", 0) / 1000 - dur) <= 3][:2]):
             clips.append((f"itunes:{t['trackId']}", fetch(t["previewUrl"], f"{name}-it{i}.m4a")))
         for source, path in clips:
             print("CLIP " + json.dumps({"source": source, "full": False}), flush=True)

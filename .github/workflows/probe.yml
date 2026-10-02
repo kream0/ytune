@@ -13,5 +13,5 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: pip install -q faster-whisper
+      - run: pip install -q faster-whisper 'av<15'
       - run: python probe/align.py
