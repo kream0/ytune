@@ -83,6 +83,16 @@ object DotGlyphs {
         "X...XX",
         "X....X",
     )
+    val FORWARD = listOf(
+        "X...X...",
+        "XX..XX..",
+        "XXX.XXX.",
+        "XXXXXXXX",
+        "XXX.XXX.",
+        "XX..XX..",
+        "X...X...",
+    )
+    val REWIND = FORWARD.map { it.reversed() }
 }
 
 @Composable

@@ -253,6 +253,14 @@ class PlayerConnection(private val context: Context) {
         _progress.value = _progress.value.copy(positionMs = positionMs)
     }
 
+    /** Jumps [deltaMs] ahead (back if negative) in the current track, within its bounds. */
+    fun seekBy(deltaMs: Long) = withController { c ->
+        var target = (c.currentPosition + deltaMs).coerceAtLeast(0)
+        if (c.duration != C.TIME_UNSET) target = target.coerceAtMost(c.duration)
+        c.seekTo(target)
+        _progress.value = _progress.value.copy(positionMs = target)
+    }
+
     fun jumpTo(index: Int) = withController { c ->
         if (index !in 0 until c.mediaItemCount) return@withController
         c.seekToDefaultPosition(index)

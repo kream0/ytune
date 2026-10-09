@@ -89,6 +89,23 @@ import app.ytune.ui.components.TrackRow
 import app.ytune.ui.theme.P
 import app.ytune.ui.theme.Type
 import coil.compose.AsyncImage
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalViewConfiguration
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun NowPlayingScreen(onClose: () -> Unit) {
@@ -146,8 +163,20 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 if (showQueue) {
                     QueueList(state)
                 } else {
+                    // Tap the cover: dots → photo → lyrics → dots. Double-tap its left or right
+                    // half: 10 s back or ahead.
+                    val taps = rememberCoverTaps {
+                        Graph.settings.update { s ->
+                            when {
+                                s.lyricsView -> s.copy(lyricsView = false, dotArtwork = true)
+                                s.dotArtwork -> s.copy(dotArtwork = false)
+                                else -> s.copy(lyricsView = true)
+                            }
+                        }
+                    }
+                    val cycle = remember(taps) { { taps.tap() } }
                     BoxWithConstraints(
-                        Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 8.dp),
+                        Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 8.dp).trackTouchX(taps),
                         contentAlignment = Alignment.Center,
                     ) {
                         val side = if (maxWidth < maxHeight) maxWidth else maxHeight
@@ -155,16 +184,6 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                             settings.lyricsView -> ArtMode.LYRICS
                             settings.dotArtwork -> ArtMode.DOTS
                             else -> ArtMode.PHOTO
-                        }
-                        // Tap the cover: dots → photo → lyrics → dots.
-                        val cycle = {
-                            Graph.settings.update { s ->
-                                when {
-                                    s.lyricsView -> s.copy(lyricsView = false, dotArtwork = true)
-                                    s.dotArtwork -> s.copy(dotArtwork = false)
-                                    else -> s.copy(lyricsView = true)
-                                }
-                            }
                         }
                         Crossfade(targetState = mode == ArtMode.LYRICS, label = "lyrics") { lyrics ->
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -189,6 +208,10 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                                     )
                                 }
                             }
+                        }
+                        Box(Modifier.width(if (mode == ArtMode.LYRICS) maxWidth else side).fillMaxHeight()) {
+                            JumpBadge(taps, -1, Modifier.align(Alignment.CenterStart).padding(start = 20.dp))
+                            JumpBadge(taps, 1, Modifier.align(Alignment.CenterEnd).padding(end = 20.dp))
                         }
                     }
                 }
@@ -218,6 +241,114 @@ fun NowPlayingScreen(onClose: () -> Unit) {
 }
 
 private enum class ArtMode { DOTS, PHOTO, LYRICS }
+
+/**
+ * Taps on the cover, or the lyrics in its place. A single tap cycles what it shows (once it's
+ * clear no second tap follows); a double tap on its left or right half jumps 10 s back or
+ * ahead, and each further tap on that side while the jump shows adds 10 s, as on YouTube.
+ */
+@Stable
+private class CoverTaps(
+    private val scope: CoroutineScope,
+    private val doubleTapMs: Long,
+    private val onCycle: () -> Unit,
+    private val onJump: () -> Unit,
+) {
+    /** Where the last touch went down, as a fraction of the width. */
+    var downX = 0.5f
+
+    /** Side whose jump is showing: -1 back, 1 ahead, 0 none. */
+    var showing by mutableIntStateOf(0)
+        private set
+
+    /** Seconds jumped by the current run of taps. */
+    var seconds by mutableIntStateOf(0)
+        private set
+
+    private var single: Job? = null
+    private var singleSide = 0
+    private var hide: Job? = null
+
+    fun tap() {
+        val side = if (downX < 0.5f) -1 else 1
+        when {
+            showing == side -> jump(side)
+            single?.isActive == true && singleSide == side -> {
+                single?.cancel()
+                jump(side)
+            }
+            else -> {
+                single?.cancel()
+                singleSide = side
+                single = scope.launch {
+                    delay(doubleTapMs)
+                    onCycle()
+                }
+            }
+        }
+    }
+
+    private fun jump(side: Int) {
+        Graph.player.seekBy(side * JUMP_MS)
+        seconds = (if (showing == side) seconds else 0) + (JUMP_MS / 1000).toInt()
+        showing = side
+        onJump()
+        hide?.cancel()
+        hide = scope.launch {
+            delay(SHOWN_MS)
+            showing = 0
+        }
+    }
+
+    private companion object {
+        const val JUMP_MS = 10_000L
+        const val SHOWN_MS = 900L
+    }
+}
+
+@Composable
+private fun rememberCoverTaps(onCycle: () -> Unit): CoverTaps {
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    val doubleTapMs = LocalViewConfiguration.current.doubleTapTimeoutMillis
+    val cycle by rememberUpdatedState(onCycle)
+    return remember(scope) {
+        CoverTaps(scope, doubleTapMs, { cycle() }) { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+    }
+}
+
+/** Notes where each touch goes down (without taking it from the cover or lyrics below). */
+private fun Modifier.trackTouchX(taps: CoverTaps) = pointerInput(taps) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            event.changes.firstOrNull { it.changedToDownIgnoreConsumed() }?.let {
+                taps.downX = it.position.x / size.width
+            }
+        }
+    }
+}
+
+/** "◀◀ 10 s" / "10 s ▶▶" over the cover while a jump shows. */
+@Composable
+private fun JumpBadge(taps: CoverTaps, direction: Int, modifier: Modifier) {
+    AnimatedVisibility(
+        visible = taps.showing == direction,
+        modifier = modifier,
+        enter = fadeIn(tween(120)) + scaleIn(tween(120), initialScale = 0.8f),
+        exit = fadeOut(tween(300)),
+    ) {
+        Row(
+            Modifier.clip(CircleShape).background(P.inverse).padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (direction < 0) DotIcon(DotGlyphs.REWIND, P.onInverse, Modifier.size(width = 22.dp, height = 18.dp))
+            Text("${taps.seconds} s", style = Type.clock, color = P.onInverse)
+            if (direction > 0) DotIcon(DotGlyphs.FORWARD, P.onInverse, Modifier.size(width = 22.dp, height = 18.dp))
+        }
+    }
+}
 
 @Composable
 private fun CoverArt(url: String?, mode: ArtMode, playing: Boolean, modifier: Modifier, onToggle: () -> Unit) {
